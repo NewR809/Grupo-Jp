@@ -1,0 +1,6 @@
+flask==3.0.0
+pymysql==1.1.0
+flask
+flask-httpauth
+pymysql
+pandas
