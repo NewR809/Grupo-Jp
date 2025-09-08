@@ -72,43 +72,22 @@ def insertar_ingreso():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Nuevo endpoint para Power BI ---
+# --- Endpoint para Power BI con tablas separadas ---
 @app.route("/datos", methods=["GET"])
 @autenticar
 def datos():
     """
-    Devuelve datos combinados de Gastos e Ingresos.
-    Query param opcional: tipo=gastos | ingresos | todos (default: todos)
+    Devuelve un JSON con dos propiedades: 'Gastos' e 'Ingresos'.
+    Cada propiedad es una lista de registros de su tabla correspondiente.
     """
     try:
-        tipo = request.args.get("tipo", "todos").lower()
-        registros = []
+        gastos = consultar_tabla("Gastos")
+        ingresos = consultar_tabla("Ingresos")
 
-        if tipo in ("gastos", "todos"):
-            gastos = consultar_tabla("Gastos")
-            for g in gastos:
-                registros.append({
-                    "tipo": "gasto",
-                    "fecha": g.get("fecha"),
-                    "categoria": g.get("categoria"),
-                    "concepto": g.get("descripcion"),
-                    "monto": g.get("monto"),
-                    "origen": None
-                })
-
-        if tipo in ("ingresos", "todos"):
-            ingresos = consultar_tabla("Ingresos")
-            for i in ingresos:
-                registros.append({
-                    "tipo": "ingreso",
-                    "fecha": i.get("fecha"),
-                    "categoria": None,
-                    "concepto": i.get("descripcion"),
-                    "monto": i.get("monto"),
-                    "origen": i.get("fuente")
-                })
-
-        return jsonify(registros), 200
+        return jsonify({
+            "Gastos": gastos,
+            "Ingresos": ingresos
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
