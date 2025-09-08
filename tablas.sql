@@ -21,5 +21,10 @@ CREATE TABLE IF NOT EXISTS Gastos (
     categoria VARCHAR(150) NOT NULL,
     descripcion TEXT
 );
+RENAME TABLE Gastos TO gastos;
+RENAME TABLE Ingresos TO ingresos;
+ALTER USER 'tu_usuario'@'%' IDENTIFIED WITH 'mysql_native_password' BY 'tu_contraseña';
 
+ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'TU_PASSWORD';
+FLUSH PRIVILEGES;
 

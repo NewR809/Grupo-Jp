@@ -3,9 +3,8 @@ DB_CONFIG = {
     "port": 18234,
     "user": "root",
     "password": "UyuZkiAaxFytvlevPCSrGMNPKhOeYxXT",
-    "database": "railway",
-    "charset": "utf8mb4",
-    "cursorclass": "DictCursor"
+    "database": "railway"
+    #"cursorclass": "DictCursor"
 }
 
 USERNAME = "powerbi"

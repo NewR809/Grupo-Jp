@@ -17,24 +17,14 @@ import sqlite3
 import os
 import sqlite3
 import mysql.connector
-from flask import Flask
-from routes.ingresos import ingresos_bp
-from routes.gastos import gastos_bp
-from routes.exportaciones import exportaciones_bp
+from db import guardar_en_mysql
+from conexion import crear_conexion
+from base_datos import guardar_en_mysql
+from base_datos import guardar_en_mysql
+from archivos import guardar_csv, leer_csv
 
 
-app = Flask(__name__)
-app.register_blueprint(ingresos_bp)
-app.register_blueprint(gastos_bp)
-app.register_blueprint(exportaciones_bp)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
-    import os
-
-# Crear carpeta si no existe
-os.makedirs("datos_exportados", exist_ok=True)
 
 # --- Credenciales ---
 usuarios = {
@@ -184,6 +174,7 @@ def registrar_log_sesion(usuario, tipo):
 class SistemaFinancieroApp:
     def __init__(self, root):
         self.root = root
+        self.usuario = "Admini"
         self.root.title("Sistema Financiero Empresarial")
         self.root.geometry("800x600")
         self.usuario = None
@@ -385,7 +376,7 @@ class SistemaFinancieroApp:
         descripcion_text = Text(ventana, height=4)
         descripcion_text.pack(pady=5, fill='both', padx=20)
 
-        def guardar_ingreso():
+        def guardar_ingresos():
             monto_str = monto_entry.get().strip()
             if not monto_str:
                 messagebox.showwarning("Entrada requerida", "Ingrese un monto")
@@ -398,14 +389,17 @@ class SistemaFinancieroApp:
             fuente = fuente_var.get()
             descripcion = descripcion_text.get("1.0", "end").strip()
             fecha = datetime.now().strftime("%Y-%m-%d")
+            datos = [fecha, self.usuario, monto, fuente, descripcion]
+
             guardar_csv(INGRESOS_FILE, [fecha, self.usuario, monto, fuente, descripcion])
-            #guardar_en_mysql(INGRESOS_FILE, [fecha, self.usuario, monto, fuente, descripcion])
+            guardar_en_mysql("Ingresos", [fecha, self.usuario, monto, fuente, descripcion])
+
             messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
             ventana.destroy()
-
-        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=guardar_ingreso).pack(pady=15)
-        # Eliminar la llamada fuera de la función, ya que 'fecha', 'monto', 'fuente', 'descripcion' no están definidos aquí.
-        # guardar_en_mysql("Ingresos", [fecha, self.usuario, monto, fuente, descripcion])
+            print("usuario:", self.usuario)
+            
+            print("Datos a guardar:", datos)
+        ttkbcliner.Button(ventana, text="Guardar Ingresos", bootstyle="success", command=guardar_ingresos).pack(pady=15)
 
 
     def mostrar_vista_previa_exportar(self):
@@ -596,7 +590,7 @@ def guardar_en_mysql(tabla, datos):
         conexion = mysql.connector.connect(
             host="yamanote.proxy.rlwy.net",
             port=18234,
-            database="Railway-MySQL",
+            database="Railway",
             user="root",
             password="UyuZkiAaxFytvlevPCSrGMNPKhOeYxXT",
             #ssl_ca="ca.pem"   # ⚠️ Debes descargar este archivo desde Aiven
@@ -657,8 +651,9 @@ def guardar_gastos_detallados(self):
 
 def mostrar_registrar_ingreso(self):
         ventana = Toplevel(self.root)
-        ventana.title("Registrar Ingreso")
+        ventana.title("Registrar Ingresos")
         ventana.geometry("400x400")
+        usuario_actual = self.usuario  # Guardar el usuario actual en una variable local
 
         ttkbcliner.Label(ventana, text="Monto del ingreso:", font=("Segoe UI", 12)).pack(pady=8)
         monto_entry = ttkbcliner.Entry(ventana)
@@ -674,7 +669,10 @@ def mostrar_registrar_ingreso(self):
         descripcion_text = Text(ventana, height=4)
         descripcion_text.pack(pady=5, fill='both', padx=20)
 
-        def guardar_ingreso():
+        def guardar_ingreso()-> None: # type: ignore
+            print("Ingreso guardado correctamente.")
+            #llama la funcion 
+            guardar_ingreso()
             monto_str = monto_entry.get().strip()
             if not monto_str:
                 messagebox.showwarning("Entrada requerida", "Ingrese un monto")
@@ -693,11 +691,13 @@ def mostrar_registrar_ingreso(self):
             datos = [fecha, self.usuario, monto, fuente, descripcion]
             guardar_csv(INGRESOS_FILE, datos)           # Guardar en CSV
             guardar_en_mysql("Ingresos", datos)         # Guardar en MySQL
+            print("usuario:", self.usuario)
+            print("Datos a guardar:", datos)
 
             messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
             ventana.destroy()
 
-        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=guardar_ingreso).pack(pady=15)
+        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=self.guardar_ingreso).pack(pady=15)
 
 
 def guardar_gastos_empresa(self, empresa, entradas):
@@ -713,6 +713,7 @@ def guardar_gastos_empresa(self, empresa, entradas):
                     
                     guardar_csv(GASTOS_FILE, datos)         # Guardar en CSV
                     guardar_en_mysql("Gastos", datos)       # Guardar en MySQL
+                    
 
                 except ValueError:
                     messagebox.showwarning("Valor Inválido", f"El valor para '{nombre_campo}' no es un número válido y será omitido.")
@@ -721,3 +722,23 @@ def guardar_gastos_empresa(self, empresa, entradas):
         messagebox.showinfo("Éxito", f"Gastos para {empresa} guardados correctamente.")
 
 
+def guardar_ingreso_empresa(self, empresa,entradas):
+        """Valida y guarda los ingresos introducidos en el formulario."""
+        fecha = datetime.now().strftime("%Y-%m-%d")
+        
+        for nombre_campo, entry_widget in entradas.items():
+            monto_str = entry_widget.get().strip()
+            if monto_str:
+                try:
+                    monto = float(monto_str)
+                    datos = [fecha, empresa, monto, f"Ingresos - {nombre_campo}", "Formulario de Admin"]
+                    
+                    guardar_csv(INGRESOS_FILE, datos)         # Guardar en CSV
+                    guardar_en_mysql("Ingresos", datos)       # Guardar en MySQL
+                    
+
+                except ValueError:
+                    messagebox.showwarning("Valor Inválido", f"El valor para '{nombre_campo}' no es un número válido y será omitido.")
+                    continue
+        
+        messagebox.showinfo("Éxito", f"Ingresos para {empresa} guardados correctamente.")

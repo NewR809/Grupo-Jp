@@ -1,8 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 from tkinter import messagebox
-import pymysql
-from pymysql.err import OperationalError, InternalError
+
 import pandas as pd
 import ssl
 from flask import Flask, jsonify, request, Response  # Import Flask, jsonify, request, and Response
@@ -21,7 +20,7 @@ def definir_conexion():
     "cursorclass": "DictCursor"
 }
 
-    return pymysql.connect(**DB_CONFIG)
+    return mysql.connector.connect(**DB_CONFIG)
 
 USERNAME = "powerbi"
 PASSWORD = "secure123"
