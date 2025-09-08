@@ -391,6 +391,7 @@ class SistemaFinancieroApp:
             fecha = datetime.now().strftime("%Y-%m-%d")
             datos = [fecha, self.usuario, monto, fuente, descripcion]
 
+
             guardar_csv(INGRESOS_FILE, [fecha, self.usuario, monto, fuente, descripcion])
             guardar_en_mysql("Ingresos", [fecha, self.usuario, monto, fuente, descripcion])
 
