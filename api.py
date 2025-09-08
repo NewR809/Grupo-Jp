@@ -45,25 +45,73 @@ def consultar_ingresos():
 @autenticar
 def insertar_gasto():
     try:
-        datos = request.get_json()
-        cliente_id = datos.get("cliente_id")
-        dato = datos.get("dato")
-        usuario = datos.get("usuario")
-        monto = datos.get("monto")
-        categoria = datos.get("categoria")
-        descripcion = datos.get("descripcion")
+        data = request.get_json(force=True, silent=False)
+        requerido = ["fecha", "categoria", "monto", "descripcion"]
+        faltan = [k for k in requerido if k not in data]
+        if faltan:
+            return jsonify({"error": f"Faltan campos: {', '.join(faltan)}"}), 400
 
-        if not all([cliente_id, dato, usuario, monto, categoria, descripcion]):
-            return jsonify({"error": "Faltan campos requeridos"}), 400
-
-        insertar_en_tabla("Gastos", cliente_id, dato, usuario, monto, categoria, descripcion)
-        return jsonify({"mensaje": "Gasto registrado correctamente"}), 200
+        insertar_en_tabla("Gastos", data)
+        return jsonify({"mensaje": "Gasto insertado correctamente"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Ejecutar servidor ---
-import os
+# --- Insertar ingreso ---
+@app.route("/insertar_ingreso", methods=["POST"])
+@autenticar
+def insertar_ingreso():
+    try:
+        data = request.get_json(force=True, silent=False)
+        requerido = ["fecha", "fuente", "monto", "descripcion"]
+        faltan = [k for k in requerido if k not in data]
+        if faltan:
+            return jsonify({"error": f"Faltan campos: {', '.join(faltan)}"}), 400
 
+        insertar_en_tabla("Ingresos", data)
+        return jsonify({"mensaje": "Ingreso insertado correctamente"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- Nuevo endpoint para Power BI ---
+@app.route("/datos", methods=["GET"])
+@autenticar
+def datos():
+    """
+    Devuelve datos combinados de Gastos e Ingresos.
+    Query param opcional: tipo=gastos | ingresos | todos (default: todos)
+    """
+    try:
+        tipo = request.args.get("tipo", "todos").lower()
+        registros = []
+
+        if tipo in ("gastos", "todos"):
+            gastos = consultar_tabla("Gastos")
+            for g in gastos:
+                registros.append({
+                    "tipo": "gasto",
+                    "fecha": g.get("fecha"),
+                    "categoria": g.get("categoria"),
+                    "concepto": g.get("descripcion"),
+                    "monto": g.get("monto"),
+                    "origen": None
+                })
+
+        if tipo in ("ingresos", "todos"):
+            ingresos = consultar_tabla("Ingresos")
+            for i in ingresos:
+                registros.append({
+                    "tipo": "ingreso",
+                    "fecha": i.get("fecha"),
+                    "categoria": None,
+                    "concepto": i.get("descripcion"),
+                    "monto": i.get("monto"),
+                    "origen": i.get("fuente")
+                })
+
+        return jsonify(registros), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- Punto de entrada ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000, debug=False)
