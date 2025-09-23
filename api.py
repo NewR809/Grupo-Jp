@@ -31,9 +31,39 @@ def get_connection():
 # --- Ruta principal ---
 @app.route("/")
 def home():
-    return "API para Power BI y Consultas funcionando correctamente"
+    return "API Financiera + Servidor de Licencias funcionando 🚀"
 
-# --- Consultar gastos ---
+# ============================================================
+# 🔑 Endpoints de Licencias
+# ============================================================
+
+@app.route("/licencias/validar", methods=["GET"])
+def validar_licencia():
+    """
+    Endpoint de validación de licencias.
+    Aquí puedes implementar tu lógica real:
+    - Verificar una clave enviada por query param o header
+    - Consultar en DB si la licencia existe y está activa
+    """
+    clave = request.args.get("clave")
+    if clave == "ABC123":  # ejemplo de validación simple
+        return jsonify({"status": "ok", "mensaje": "Licencia válida"}), 200
+    else:
+        return jsonify({"status": "error", "mensaje": "Licencia inválida"}), 401
+
+@app.route("/licencias/registrar", methods=["POST"])
+def registrar_licencia():
+    """
+    Endpoint para registrar una nueva licencia.
+    """
+    data = request.get_json(force=True, silent=False)
+    # Aquí podrías guardar en DB la licencia
+    return jsonify({"status": "ok", "mensaje": "Licencia registrada", "data": data}), 201
+
+# ============================================================
+# 📊 Endpoints Financieros
+# ============================================================
+
 @app.route("/consultar_gastos", methods=["GET"])
 @autenticar
 def consultar_gastos():
@@ -43,7 +73,6 @@ def consultar_gastos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Consultar ingresos ---
 @app.route("/consultar_ingresos", methods=["GET"])
 @autenticar
 def consultar_ingresos():
@@ -53,7 +82,6 @@ def consultar_ingresos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Insertar gasto ---
 @app.route("/insertar_gasto", methods=["POST"])
 @autenticar
 def insertar_gasto():
@@ -69,7 +97,6 @@ def insertar_gasto():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Insertar ingreso ---
 @app.route("/insertar_ingreso", methods=["POST"])
 @autenticar
 def insertar_ingreso():
@@ -85,7 +112,6 @@ def insertar_ingreso():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- Endpoint para Power BI con tablas separadas ---
 @app.route("/datos", methods=["GET"])
 @autenticar
 def datos():
@@ -99,7 +125,10 @@ def datos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- NUEVO: Consultas con filtros y recurrente ---
+# ============================================================
+# 🔎 Endpoint de Consultas con filtros y recurrente
+# ============================================================
+
 @app.route("/consultas", methods=["GET"])
 def consultas():
     empresa = request.args.get("empresa")
@@ -148,6 +177,7 @@ def consultas():
         """)
         recurrente = cursor.fetchall()
 
+    cursor.close()
     conn.close()
 
     return jsonify({

@@ -1,5 +1,5 @@
 import os
-from servidor_de_licencias.license_server import app
+#from servidor_de_licencias.license_server import app
 from api import app  # Asegúrate de que 'app' esté definido en api.py
 
 # Gunicorn y otros servidores WSGI buscan la variable "application"

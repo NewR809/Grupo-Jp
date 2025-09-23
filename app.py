@@ -40,7 +40,7 @@ DB_CONFIG = {
 usuarios = {
     "Henko01": "Hen4514",
     "Tpack": "Tpack4514",
-    "jpsolar": "Jpsolar4514",
+    "Jpsolar": "Jpsolar4514",
     "Quidopedia": "Qpd4514"
 }
 administrador = {
