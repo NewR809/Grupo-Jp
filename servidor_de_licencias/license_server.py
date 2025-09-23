@@ -13,7 +13,13 @@ from servidor_de_licencias.config_server import (
 
 from servidor_de_licencias.license_store import LicenseStore
 from api_blueprint import api_bp   # 👈 Importamos el Blueprint de la API
+from flask import Blueprint
 
+license_bp = Blueprint("license", __name__)
+
+@license_bp.route("/licencia", methods=["GET"])
+def validar_licencia():
+    return {"status": "ok", "mensaje": "Licencia válida"}
 # Inicializa Flask y autenticación
 app = Flask(__name__)
 auth = HTTPBasicAuth()
