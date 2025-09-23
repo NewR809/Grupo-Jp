@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from functools import wraps
+import mysql.connector
 from db import consultar_tabla, insertar_en_tabla
 
 # --- Autenticación básica ---
@@ -15,10 +16,22 @@ def autenticar(f):
 # --- Crear app Flask ---
 app = Flask(__name__)
 
+# --- Configuración DB para consultas ---
+DB_CONFIG = {
+    "host": "gondola.proxy.rlwy.net",
+    "user": "root",
+    "password": "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
+    "database": "railway",
+    "port": 18615
+}
+
+def get_connection():
+    return mysql.connector.connect(**DB_CONFIG)
+
 # --- Ruta principal ---
 @app.route("/")
 def home():
-    return "API para Power BI funcionando correctamente"
+    return "API para Power BI y Consultas funcionando correctamente"
 
 # --- Consultar gastos ---
 @app.route("/consultar_gastos", methods=["GET"])
@@ -76,20 +89,72 @@ def insertar_ingreso():
 @app.route("/datos", methods=["GET"])
 @autenticar
 def datos():
-    """
-    Devuelve un JSON con dos propiedades: 'Gastos' e 'Ingresos'.
-    Cada propiedad es una lista de registros de su tabla correspondiente.
-    """
     try:
         gastos = consultar_tabla("Gastos")
         ingresos = consultar_tabla("Ingresos")
-
         return jsonify({
             "Gastos": gastos,
             "Ingresos": ingresos
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# --- NUEVO: Consultas con filtros y recurrente ---
+@app.route("/consultas", methods=["GET"])
+def consultas():
+    empresa = request.args.get("empresa")
+    anio = request.args.get("anio")
+    mes = request.args.get("mes")
+    semana = request.args.get("semana")
+    dia = request.args.get("dia")
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # --- Gastos ---
+    query_gastos = "SELECT fecha, usuario, monto, categoria, descripcion FROM gastos WHERE 1=1"
+    if empresa: query_gastos += f" AND usuario='{empresa}'"
+    if anio: query_gastos += f" AND YEAR(fecha)={anio}"
+    if mes: query_gastos += f" AND MONTH(fecha)={mes}"
+    if semana: query_gastos += f" AND WEEK(fecha)={semana}"
+    if dia: query_gastos += f" AND DAY(fecha)={dia}"
+    cursor.execute(query_gastos)
+    gastos = cursor.fetchall()
+
+    # --- Ingresos ---
+    query_ingresos = "SELECT fecha, usuario, monto, fuente, descripcion FROM ingresos WHERE 1=1"
+    if empresa: query_ingresos += f" AND usuario='{empresa}'"
+    if anio: query_ingresos += f" AND YEAR(fecha)={anio}"
+    if mes: query_ingresos += f" AND MONTH(fecha)={mes}"
+    if semana: query_ingresos += f" AND WEEK(fecha)={semana}"
+    if dia: query_ingresos += f" AND DAY(fecha)={dia}"
+    cursor.execute(query_ingresos)
+    ingresos = cursor.fetchall()
+
+    # --- Gasto más recurrente del mes ---
+    recurrente = []
+    if empresa:
+        if not mes:  # si no se pasa mes, usar el actual
+            cursor.execute("SELECT MONTH(CURDATE()) as mes_actual")
+            mes = cursor.fetchone()["mes_actual"]
+
+        cursor.execute(f"""
+            SELECT categoria, COUNT(*) as repeticiones
+            FROM gastos
+            WHERE usuario='{empresa}' AND MONTH(fecha)={mes}
+            GROUP BY categoria
+            ORDER BY repeticiones DESC
+            LIMIT 1
+        """)
+        recurrente = cursor.fetchall()
+
+    conn.close()
+
+    return jsonify({
+        "gastos": gastos,
+        "ingresos": ingresos,
+        "recurrente": recurrente
+    })
 
 # --- Punto de entrada ---
 if __name__ == "__main__":

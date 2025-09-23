@@ -1,10 +1,10 @@
 DB_CONFIG = {
-    "host": "yamanote.proxy.rlwy.net",
-    "port": 18234,
+    "host": "gondola.proxy.rlwy.net",
+    "port": 18615,
     "user": "root",
-    "password": "UyuZkiAaxFytvlevPCSrGMNPKhOeYxXT",
-    "database": "railway"
-    #"cursorclass": "DictCursor"
+    "password": "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
+    "database": "railway",
+    "charset": "utf8mb4"
 }
 
 USERNAME = "powerbi"

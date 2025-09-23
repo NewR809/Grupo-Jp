@@ -1,26 +1,31 @@
-import mysql.connector
-from mysql.connector import Error
-from tkinter import messagebox
+#actualizaciones realizadas en los archivos:
+#db.py
+from mysql.connector import pooling
 
-import pandas as pd
-import ssl
-from flask import Flask, jsonify, request, Response  # Import Flask, jsonify, request, and Response
-import subprocess  # Import subprocess for firewall function
-from functools import wraps
-import requests
-
-def definir_conexion():
-    DB_CONFIG = {
-        "host": "yamanote.proxy.rlwy.net",
-        "port": 18234,
-        "user": "root",
-        "password": "UyuZkiAaxFytvlevPCSrGMNPKhOeYxXT",
-        "database": "railway",
-        "charset": "utf8mb4",
-    "cursorclass": "DictCursor"
+# Configuración de conexión a Railway
+DB_CONFIG = {
+    "host": "gondola.proxy.rlwy.net",
+    "port": 18615,
+    "user": "root",
+    "password": "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
+    "database": "railway",
+    "charset": "utf8mb4"
 }
 
-    return mysql.connector.connect(**DB_CONFIG)
+# Crear un pool de conexiones reutilizables
+connection_pool = pooling.MySQLConnectionPool(
+    pool_name="mypool",
+    pool_size=5,   # Ajusta según la carga esperada
+    **DB_CONFIG
+)
 
+def definir_conexion():
+    """
+    Obtiene una conexión desde el pool.
+    Recuerda cerrar la conexión con .close() después de usarla.
+    """
+    return connection_pool.get_connection()
+
+# Credenciales de autenticación para tu API
 USERNAME = "powerbi"
 PASSWORD = "secure123"

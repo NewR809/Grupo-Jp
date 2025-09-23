@@ -20,17 +20,27 @@ import mysql.connector
 from db import guardar_en_mysql
 from conexion import crear_conexion
 from base_datos import guardar_en_mysql
-from base_datos import guardar_en_mysql
 from archivos import guardar_csv, leer_csv
+#3
+from preview_module import VistaPrevia
+#$60
+import requests
 
-
+# --- Configuración de conexión MySQL ---
+DB_CONFIG = {
+    "host": "gondola.proxy.rlwy.net",
+    "user": "root",
+    "port": 18615,
+    "password": "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
+    "database": "railway"
+}
 
 
 # --- Credenciales ---
 usuarios = {
     "Henko01": "Hen4514",
     "Tpack": "Tpack4514",
-    "JpSolar": "Jpsolar4514",
+    "jpsolar": "Jpsolar4514",
     "Quidopedia": "Qpd4514"
 }
 administrador = {
@@ -44,11 +54,25 @@ nombres_usuarios = {
     "Quidopedia": "Usuario",
     "Admin": "Gerente"
 }
+
+CLAVES_EMPRESAS = {
+    "Henko01": "henko123",
+    "Tpack": "tpack123",
+    "JpSolar": "jpsolar123",
+    "Quidopedia": "quidopedia123"
+}
+
+
 # --- Archivos ---
 GASTOS_FILE = "gastos.csv"
 INGRESOS_FILE = "ingresos.csv"
 LOG_SESIONES = "log_sesiones.csv"
 TIEMPO_MAX_INACTIVIDAD = 300  # segundos
+
+# --- Registrar sesión ---
+def registrar_log_sesion(usuario, tipo):
+    fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    guardar_csv(LOG_SESIONES, [fecha_hora, usuario, tipo])
 
 
 # --- Utilidades de archivo ---
@@ -120,61 +144,15 @@ def exportar_a_excel_consolidado(archivo_gastos, archivo_ingresos, archivo_excel
     messagebox.showinfo("Exportación exitosa", f"Archivo exportado como: {archivo_excel}")
 
 # --- Vista previa antes de exportar ---
-class VistaPrevia(tk.Toplevel):
-    def __init__(self, master, gastos_df, ingresos_df, export_callback):
-        super().__init__(master)
-        self.title("Vista Previa Datos")
-        self.geometry("900x500")
-        self.export_callback = export_callback
-        self.gastos_df = gastos_df
-        self.ingresos_df = ingresos_df
 
-        tab_control = ttk.Notebook(self)
-        tab_control.pack(expand=1, fill="both")
 
-        self.tab_gastos = ttk.Frame(tab_control)
-        tab_control.add(self.tab_gastos, text='Gastos')
-        self.crear_treeview(self.tab_gastos, gastos_df)
 
-        self.tab_ingresos = ttk.Frame(tab_control)
-        tab_control.add(self.tab_ingresos, text='Ingresos')
-        self.crear_treeview(self.tab_ingresos, ingresos_df)
-
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(pady=10)
-        ttk.Button(btn_frame, text="Exportar", command=self.confirmar_exportacion).pack(side='left', padx=10)
-        ttk.Button(btn_frame, text="Cancelar", command=self.destroy).pack(side='left', padx=10)
-
-    def crear_treeview(self, parent, df):
-        cols = ["Fecha", "Usuario", "Monto", "Categoría/Fuente", "Descripción"]
-        if not df.empty:
-            df.columns = cols
-        
-        tree = ttk.Treeview(parent, columns=cols, show='headings')
-        for c in cols:
-            tree.heading(c, text=c)
-            tree.column(c, width=150)
-        tree.pack(expand=True, fill='both')
-
-        if not df.empty:
-            for _, row in df.iterrows():
-                tree.insert("", "end", values=list(row))
-        return tree
-
-    def confirmar_exportacion(self):
-        self.export_callback()
-        self.destroy()
-
-# --- Registrar sesión ---
-def registrar_log_sesion(usuario, tipo):
-    fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    guardar_csv(LOG_SESIONES, [fecha_hora, usuario, tipo])
 
 # --- Interfaz con ttkbootstrap ---
 class SistemaFinancieroApp:
     def __init__(self, root):
         self.root = root
-        self.usuario = "Admini"
+        #self.usuario = "Admini"
         self.root.title("Sistema Financiero Empresarial")
         self.root.geometry("800x600")
         self.usuario = None
@@ -192,11 +170,16 @@ class SistemaFinancieroApp:
         self.ultima_actividad = time.time()
 
     def verificar_inactividad(self):
-        if time.time() - self.ultima_actividad > TIEMPO_MAX_INACTIVIDAD:
-            messagebox.showinfo("Sesión terminada", "Se cerró la sesión por inactividad.")
-            self.mostrar_login()
-        else:
-            self.root.after(10000, self.verificar_inactividad)
+        try:
+            if time.time() - self.ultima_actividad > TIEMPO_MAX_INACTIVIDAD:
+                messagebox.showinfo("Sesión terminada", "Se cerró la sesión por inactividad.")
+                self.mostrar_login()
+            else:
+                # Reprograma la verificación cada 10 segundos
+                self.root.after(10000, self.verificar_inactividad)
+        except tk.TclError:
+            # La ventana principal ya fue destruida, no hacer nada
+            pass
 
     def crear_menu_barra(self):
         self.menubar = Menu(self.root)
@@ -220,6 +203,7 @@ class SistemaFinancieroApp:
             self.menubar.add_cascade(label="Administración", menu=self.menu_admin)
 
     def salir_app(self):
+        self.root.after_cancel(self.root)
         self.root.quit()
         sys.exit()
 
@@ -300,14 +284,14 @@ class SistemaFinancieroApp:
     def mostrar_menu_gastos(self):
         ventana = Toplevel(self.root)
         ventana.title("Registrar Gastos Detallados")
-        ventana.geometry("600x500")
+        ventana.geometry("700x550")
 
         notebook = ttk.Notebook(ventana)
         notebook.pack(expand=1, fill='both', padx=10, pady=10)
 
-        gastos_fijos_campos = ["Renta", "Luz", "Internet/Teléfono", "Flota", "Transporte","Limpieza", "Publicidad", "Combustible"]
-        gastos_operacionales_campos = ["TSS", "INFOTEP", "Anticipo",]
-        gastos_varios_campos = ["Mobiliario", "Consumible/compra",]
+        gastos_fijos_campos = ["Renta", "Luz", "Internet/Teléfono", "Flota", "Transporte", "Limpieza", "Publicidad", "Combustible"]
+        gastos_operacionales_campos = ["TSS", "INFOTEP", "Anticipo"]
+        gastos_varios_campos = ["Mobiliario", "Consumible/compra","Materiales","equipos" "Otros"]
 
         frame_fijos = ttkbcliner.Frame(notebook, padding=10)
         frame_operacionales = ttkbcliner.Frame(notebook, padding=10)
@@ -322,10 +306,16 @@ class SistemaFinancieroApp:
             for campo in campos:
                 fila = ttkbcliner.Frame(frame)
                 fila.pack(fill='x', pady=4)
-                ttkbcliner.Label(fila, text=campo + ": ", width=20).pack(side='left')
-                entrada = ttkbcliner.Entry(fila)
-                entrada.pack(side='left', fill='x', expand=True)
-                entradas[campo] = entrada
+
+                ttkbcliner.Label(fila, text=campo + " (Monto):", width=20).pack(side='left')
+                entrada_monto = ttkbcliner.Entry(fila, width=12)
+                entrada_monto.pack(side='left', padx=5)
+
+                ttkbcliner.Label(fila, text="Descripción:", width=12).pack(side='left')
+                entrada_desc = ttkbcliner.Entry(fila)
+                entrada_desc.pack(side='left', fill='x', expand=True)
+
+                entradas[campo] = (entrada_monto, entrada_desc)
             return entradas
 
         self.entradas_fijos = crear_campos(frame_fijos, gastos_fijos_campos)
@@ -337,30 +327,78 @@ class SistemaFinancieroApp:
         
 
     def guardar_gastos_detallados(self):
-        def validar_y_guardar(entradas, categoria_general):
-            for campo, entrada in entradas.items():
-                valor = entrada.get().strip()
+        registros = []
+
+        def recolectar(entradas, categoria_general):
+            for campo, par in entradas.items():
+                if isinstance(par, tuple) and len(par) == 2:
+                    entrada_monto, entrada_desc = par
+                    valor = entrada_monto.get().strip()
+                    descripcion = entrada_desc.get().strip()
+                else:
+                    entrada_monto = par
+                    valor = entrada_monto.get().strip()
+                    descripcion = ""
                 if valor:
                     try:
                         monto = float(valor)
-                        fecha = datetime.now().strftime("%Y-%m-%d")
-                        guardar_csv(GASTOS_FILE, [fecha, self.usuario, monto, f"{categoria_general} - {campo}", ""])
-                        guardar_en_mysql("Gastos", [fecha, self.usuario, monto, f"{categoria_general} - {campo}", ""])
                     except ValueError:
                         messagebox.showwarning("Valor inválido", f"El valor de '{campo}' no es válido")
                         return False
+                    fecha = datetime.now().strftime("%Y-%m-%d")
+                    registros.append([fecha, self.usuario, monto, f"{categoria_general} - {campo}", descripcion])
             return True
 
-        if not validar_y_guardar(self.entradas_fijos, "Gastos Fijos"): return
-        if not validar_y_guardar(self.entradas_operacionales, "Gastos Operacionales"): return
-        if not validar_y_guardar(self.entradas_varios, "Gastos Variados"): return
-        
-        messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+        if not recolectar(self.entradas_fijos, "Gastos Fijos"): return
+        if not recolectar(self.entradas_operacionales, "Gastos Operacionales"): return
+        if not recolectar(self.entradas_varios, "Gastos Variados"): return
+        if not registros:
+            messagebox.showwarning("Sin datos", "No se ingresaron gastos válidos")
+            return
+
+        if self.tipo == "admin":
+            for fila in registros:
+                guardar_csv(GASTOS_FILE, fila)
+                guardar_en_mysql("Gastos", fila)
+            messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+            return
+
+        columnas = ["Fecha", "Usuario", "Monto", "Categoría", "Descripción"]
+
+        def validar(dataset):
+            for i, fila in enumerate(dataset, 1):
+                if not fila[0]:
+                    return f"Fila {i}: la fecha es obligatoria"
+                try:
+                    float(str(fila[2]).strip())
+                except:
+                    return f"Fila {i}: el monto debe ser numérico"
+                if not fila[3]:
+                    return f"Fila {i}: la categoría es obligatoria"
+            return True
+
+        def confirmar_guardado(dataset):
+            for fila in dataset:
+                fila[2] = float(str(fila[2]).strip())
+                guardar_csv(GASTOS_FILE, fila)
+                guardar_en_mysql("Gastos", fila)
+            messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+
+        # Vista previa antes de guardar, usando VistaPrevia del preview_module
+        VistaPrevia(
+            master=self.root,
+            columns=columnas,
+            data=registros,
+            on_save=confirmar_guardado,
+            validation_func=validar,
+            title="Vista previa de gastos"
+        )
+
 
     def mostrar_registrar_ingreso(self):
         ventana = Toplevel(self.root)
         ventana.title("Registrar Ingreso")
-        ventana.geometry("400x400")
+        ventana.geometry("400x420")
 
         ttkbcliner.Label(ventana, text="Monto del ingreso:", font=("Segoe UI", 12)).pack(pady=8)
         monto_entry = ttkbcliner.Entry(ventana)
@@ -376,7 +414,7 @@ class SistemaFinancieroApp:
         descripcion_text = Text(ventana, height=4)
         descripcion_text.pack(pady=5, fill='both', padx=20)
 
-        def guardar_ingresos():
+        def guardar_ingreso():
             monto_str = monto_entry.get().strip()
             if not monto_str:
                 messagebox.showwarning("Entrada requerida", "Ingrese un monto")
@@ -386,21 +424,52 @@ class SistemaFinancieroApp:
             except ValueError:
                 messagebox.showwarning("Valor inválido", "El monto debe ser un número")
                 return
+
             fuente = fuente_var.get()
             descripcion = descripcion_text.get("1.0", "end").strip()
             fecha = datetime.now().strftime("%Y-%m-%d")
             datos = [fecha, self.usuario, monto, fuente, descripcion]
 
+            if self.tipo == "admin":
+                guardar_csv(INGRESOS_FILE, datos)
+                guardar_en_mysql("Ingresos", datos)
+                messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
+                ventana.destroy()
+                return
 
-            guardar_csv(INGRESOS_FILE, [fecha, self.usuario, monto, fuente, descripcion])
-            guardar_en_mysql("Ingresos", [fecha, self.usuario, monto, fuente, descripcion])
+            columnas = ["Fecha", "Usuario", "Monto", "Categoría", "Descripción"]
 
-            messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
-            ventana.destroy()
-            print("usuario:", self.usuario)
-            
-            print("Datos a guardar:", datos)
-        ttkbcliner.Button(ventana, text="Guardar Ingresos", bootstyle="success", command=guardar_ingresos).pack(pady=15)
+            def validar(dataset):
+                fila = dataset[0]
+                if not fila[0]:
+                    return "La fecha es obligatoria"
+                try:
+                    float(str(fila[2]).strip())
+                except:
+                    return "El monto debe ser numérico"
+                if not fila[3]:
+                    return "La categoría/fuente es obligatoria"
+                return True
+
+            def confirmar_guardado(dataset):
+                fila = dataset[0]
+                fila[2] = float(str(fila[2]).strip())
+                guardar_csv(INGRESOS_FILE, fila)
+                guardar_en_mysql("Ingresos", fila)
+                messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
+                ventana.destroy()
+
+            VistaPrevia(
+                master=self.root,
+                columns=columnas,
+                data=[datos],
+                on_save=confirmar_guardado,
+                validation_func=validar,
+                title="Vista previa de ingreso"
+            )
+
+        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=guardar_ingreso).pack(pady=15)
+
 
 
     def mostrar_vista_previa_exportar(self):
@@ -409,7 +478,29 @@ class SistemaFinancieroApp:
         if df_gastos.empty and df_ingresos.empty:
             messagebox.showerror("Error", "No hay datos para mostrar")
             return
-        VistaPrevia(self.root, df_gastos, df_ingresos, self.exportar_todo_excel)
+        # VistaPrevia(self.root, df_gastos, df_ingresos, self.exportar_todo_excel)
+        # Implementación simple de vista previa en una ventana Toplevel
+        ventana = Toplevel(self.root)
+        ventana.title("Vista Previa de Exportación")
+        ventana.geometry("800x600")
+
+        text_area = Text(ventana, wrap="word", font=("Courier New", 10))
+        text_area.pack(expand=True, fill="both", padx=10, pady=10)
+
+        if not df_gastos.empty:
+            text_area.insert("end", "=== GASTOS ===\n")
+            text_area.insert("end", df_gastos.to_string(index=False))
+            text_area.insert("end", "\n\n")
+        if not df_ingresos.empty:
+            text_area.insert("end", "=== INGRESOS ===\n")
+            text_area.insert("end", df_ingresos.to_string(index=False))
+            text_area.insert("end", "\n\n")
+
+        def exportar_y_cerrar():
+            self.exportar_todo_excel()
+            ventana.destroy()
+
+        ttkbcliner.Button(ventana, text="Exportar a Excel", bootstyle="success", command=exportar_y_cerrar).pack(pady=10)
 
     def exportar_todo_excel(self):
         exportar_a_excel_consolidado(GASTOS_FILE, INGRESOS_FILE, "datos_consolidados.xlsx", usuario_actual=self.usuario)
@@ -506,155 +597,237 @@ class SistemaFinancieroApp:
         archivo_excel = f"{self.usuario}_exportacion_completa.xlsx"
         exportar_a_excel_consolidado(df_gastos, df_ingresos, archivo_excel, usuario_actual=self.usuario)
     
-    # --- GESTIÓN DE EMPRESAS (CORREGIDO) ---
+    
+
+# --- GESTIÓN DE EMPRESAS (CORREGIDO) ---
+    # (Eliminado el uso incorrecto de '...')
+
     def gestion_empresas(self):
-        """Muestra una ventana para seleccionar una empresa y editar sus gastos."""
         ventana = Toplevel(self.root)
         ventana.title("Gestión de Empresas")
         ventana.geometry("400x300")
 
-        ttkbcliner.Label(ventana, text="🏢 Selección de Empresa", font=("Segoe UI", 14, "bold")).pack(pady=10)
+        ttkbcliner.Label(ventana, text="🏢 Selección de Empresa",
+                         font=("Segoe UI", 14, "bold")).pack(pady=10)
 
-        lista_empresas = list(usuarios.keys()) 
+        for empresa in CLAVES_EMPRESAS.keys():
+            ttkbcliner.Button(
+                ventana,
+                text=empresa,
+                command=lambda e=empresa, v=ventana: self.validar_clave_empresa(e, v)
+            ).pack(pady=5, padx=20, fill='x')
 
-        for empresa in lista_empresas:
-            btn = ttkbcliner.Button(ventana, text=empresa, command=lambda e=empresa: self.mostrar_formulario_gastos_empresa(e))
-            btn.pack(pady=5, padx=20, fill='x')
+    def validar_clave_empresa(self, empresa, ventana_padre=None):
+        clave = simpledialog.askstring("Clave de Empresa", f"Ingrese la clave para '{empresa}':", show="*")
+        if clave == CLAVES_EMPRESAS.get(empresa):
+            if ventana_padre is not None:
+                ventana_padre.destroy()
+            self.mostrar_consultas_empresa(empresa)
+        else:
+            messagebox.showerror("Error", f"Clave incorrecta para la empresa '{empresa}'")
 
-    def mostrar_formulario_gastos_empresa(self, empresa):
-        """Muestra un formulario para registrar gastos fijos de una empresa específica."""
-        ventana_form = Toplevel(self.root)
-        ventana_form.title(f"Formulario de Gastos para {empresa}")
-        ventana_form.geometry("450x350")
+    def mostrar_consultas_empresa(self, empresa):
+        ventana = Toplevel(self.root)
+        ventana.title(f"Consultas - {empresa}")
+        ventana.geometry("1200x850")
 
-        ttkbcliner.Label(ventana_form, text=f"✏️ Gastos Fijos para {empresa}", font=("Segoe UI", 12, "bold")).pack(pady=10)
-
-        frame_campos = ttkbcliner.Frame(ventana_form, padding=10)
-        frame_campos.pack(expand=True, fill='both')
-
-        entradas = {}
-        campos_gastos = ["Nómina", "Comisiones", "Dietas", "Bonos","Descuentos",]
-
-        for campo in campos_gastos:
-            fila = ttkbcliner.Frame(frame_campos)
-            fila.pack(fill='x', pady=5)
-            ttkbcliner.Label(fila, text=f"{campo}:", width=20).pack(side='left')
-            entry = ttkbcliner.Entry(fila)
-            entry.pack(side='left', fill='x', expand=True)
-            entradas[campo] = entry
-
-        def accion_guardar():
-            self.guardar_gastos_empresa(empresa, entradas)
-            ventana_form.destroy()
-
-        btn_guardar = ttkbcliner.Button(ventana_form, text="Guardar Gastos", bootstyle="success", command=accion_guardar)
-        btn_guardar.pack(pady=15)
+        # --- Filtros ---
+        marco_filtros = ttkbcliner.Frame(ventana, padding=10)
+        marco_filtros.pack(fill="x")
         
+        # año
 
-    def guardar_gastos_empresa(self, empresa, entradas):
-        """Valida y guarda los gastos introducidos en el formulario."""
-        fecha = datetime.now().strftime("%Y-%m-%d")
-        
-        for nombre_campo, entry_widget in entradas.items():
-            monto_str = entry_widget.get().strip()
-            if monto_str:
-                try:
-                    monto = float(monto_str)
-                    guardar_csv(GASTOS_FILE, [fecha, empresa, monto, f"Gastos Fijos - {nombre_campo}", "Formulario de Admin"])
-                    guardar_en_mysql("Gastos", [fecha, empresa, monto, f"Gastos Fijos - {nombre_campo}", "Formulario de Admin"])
+        ttkbcliner.Label(marco_filtros, text="Año:").pack(side="left", padx=5)
+        anios = [str(a) for a in range(2020, 2031)]
+        combo_anio = ttkbcliner.Combobox(marco_filtros, values=anios, width=6, state="readonly")
+        combo_anio.set("")  # vacío por defecto
+        combo_anio.pack(side="left", padx=5)
+        entry_anio = combo_anio
 
-                except ValueError:
-                    messagebox.showwarning("Valor Inválido", f"El valor para '{nombre_campo}' no es un número válido y será omitido.")
-                    continue
-        
-        messagebox.showinfo("Éxito", f"Gastos para {empresa} guardados correctamente.")
+        #mes
 
-        # --- Ejecutar ---
-if __name__ == "__main__":
-    app = ttkbcliner.Window(themename="morph")
-    SistemaFinancieroApp(app)
-    app.mainloop()
+        ttkbcliner.Label(marco_filtros, text="Mes:").pack(side="left", padx=5)
+        meses = [str(m) for m in range(1, 13)]
+        combo_mes = ttkbcliner.Combobox(marco_filtros, values=meses, width=4, state="readonly")
+        combo_mes.set("")
+        combo_mes.pack(side="left", padx=5)
+        entry_mes = combo_mes
+
+        # Semana
+        ttkbcliner.Label(marco_filtros, text="Semana:").pack(side="left", padx=5)
+        semanas = [str(s) for s in range(1, 54)]
+        combo_semana = ttkbcliner.Combobox(marco_filtros, values=semanas, width=4, state="readonly")
+        combo_semana.set("")
+        combo_semana.pack(side="left", padx=5)
+        entry_semana = combo_semana
+
+        # Día
+        ttkbcliner.Label(marco_filtros, text="Día:").pack(side="left", padx=5)
+        dias = [str(d) for d in range(1, 32)]
+        combo_dia = ttkbcliner.Combobox(marco_filtros, values=dias, width=4, state="readonly")
+        combo_dia.set("")
+        combo_dia.pack(side="left", padx=5)
+        entry_dia = combo_dia
+
+        # --- Tablas ---
+        marco_tablas = ttkbcliner.Frame(ventana, padding=10)
+        marco_tablas.pack(fill="both", expand=True)
+
+        ttkbcliner.Label(marco_tablas, text="📉 Gastos").pack()
+        tabla_gastos = ttk.Treeview(marco_tablas, columns=("Fecha","Usuario","Monto","Categoría","Descripción"), show="headings")
+        for col in ("Fecha","Usuario","Monto","Categoría","Descripción"):
+            tabla_gastos.heading(col, text=col)
+        tabla_gastos.pack(fill="x", pady=5)
+
+        ttkbcliner.Label(marco_tablas, text="📈 Ingresos").pack()
+        tabla_ingresos = ttk.Treeview(marco_tablas, columns=("Fecha","Usuario","Monto","Fuente","Descripción"), show="headings")
+        for col in ("Fecha","Usuario","Monto","Fuente","Descripción"):
+            tabla_ingresos.heading(col, text=col)
+        tabla_ingresos.pack(fill="x", pady=5)
+
+        ttkbcliner.Label(marco_tablas, text="🔥 Gasto más recurrente por mes").pack()
+        tabla_recurrentes = ttk.Treeview(marco_tablas, columns=("Mes","Categoría","Repeticiones"), show="headings")
+        for col in ("Mes","Categoría","Repeticiones"):
+            tabla_recurrentes.heading(col, text=col)
+        tabla_recurrentes.pack(fill="x", pady=5)
+
+        # Botón de consulta
+
+        ttkbcliner.Button(
+            ventana,
+            text="Consultar",
+            bootstyle="success",
+            command=lambda: self.ejecutar_consulta(
+                empresa, combo_anio, combo_mes, combo_semana, combo_dia,
+                tabla_gastos, tabla_ingresos, tabla_recurrentes
+            )
+        ).pack(side="left", padx=10)
+
+#código corregido de la función ejecutar_consulta 2
+
+    def ejecutar_consulta(self, empresa, combo_anio, combo_mes, combo_semana, combo_dia,
+                         tabla_gastos, tabla_ingresos, tabla_recurrentes):
+        # Limpiar tablas
+        for tabla in (tabla_gastos, tabla_ingresos, tabla_recurrentes):
+            for row in tabla.get_children():
+                tabla.delete(row)
+
+        # Parámetros de filtros
+        params = {
+            "empresa": empresa,
+            "anio": combo_anio.get().strip(),
+            "mes": combo_mes.get().strip(),
+            "semana": combo_semana.get().strip(),
+            "dia": combo_dia.get().strip()
+        }
+
+        # Llamada a la API
+        url = "https://tu-api-consultas.onrender.com/consultas"  # 👈 cambia por tu URL real
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo obtener datos de la API: {e}")
+            return
+
+        gastos = data.get("gastos", [])
+        ingresos = data.get("ingresos", [])
+        recurrente = data.get("recurrente", [])
+
+        # Insertar en tablas
+        for g in gastos:
+            tabla_gastos.insert("", "end", values=(g["fecha"], g["usuario"], g["monto"], g["categoria"], g["descripcion"]))
+        for i in ingresos:
+            tabla_ingresos.insert("", "end", values=(i["fecha"], i["usuario"], i["monto"], i["fuente"], i["descripcion"]))
+        for r in recurrente:
+            tabla_recurrentes.insert("", "end", values=(params["mes"], r["categoria"], r["repeticiones"]))
+
+
 
 
         # --- separador ---
 
-        # Aquí puedes agregar cualquier lógica adicional que necesites
-
-        # --- Ejecutar ---
-def guardar_en_mysql(tabla, datos):
-    """
-    Inserta datos en MySQL (Railway).
-    tabla: 'ingresos' o 'gastos'
-    datos: lista [fecha, usuario, monto, categoria, descripcion]
-    """
-    try:
-        conexion = mysql.connector.connect(
-            host="yamanote.proxy.rlwy.net",
-            port=18234,
-            database="Railway",
-            user="root",
-            password="UyuZkiAaxFytvlevPCSrGMNPKhOeYxXT",
-            #ssl_ca="ca.pem"   # ⚠️ Debes descargar este archivo desde Aiven
-        )
-        cursor = conexion.cursor()
-
-        if tabla.lower() == "ingresos":
-            query = """INSERT INTO ingresos (fecha, usuario, monto, categoria, descripcion)
-                       VALUES (%s, %s, %s, %s, %s)"""
-        elif tabla.lower() == "gastos":
-            query = """INSERT INTO Gastos (fecha, usuario, monto, categoria, descripcion)
-                       VALUES (%s, %s, %s, %s, %s)"""
-        else:
-            raise ValueError("Tabla no válida")
-
-        cursor.execute(query, tuple(datos))
-        conexion.commit()
-        cursor.close()
-        conexion.close()
-
-    except mysql.connector.Error as e:
-        print(f"❌ Error MySQL: {e}")
-
-
+    
 # --- Utilidades de archivo ---
 def guardar_csv(archivo, datos):
     with open(archivo, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(datos)
 
-...
 # (aquí sigue todo tu código igual hasta las funciones que guardan datos)
-...
 
 def guardar_gastos_detallados(self):
-        def validar_y_guardar(entradas, categoria_general):
-            for campo, entrada in entradas.items():
-                valor = entrada.get().strip()
+        registros = []
+
+        def recolectar(entradas, categoria_general):
+            for campo, par in entradas.items():
+                if isinstance(par, tuple) and len(par) == 2:
+                    entrada_monto, entrada_desc = par
+                    valor = entrada_monto.get().strip()
+                    descripcion = entrada_desc.get().strip()
+                else:
+                    entrada_monto = par
+                    valor = entrada_monto.get().strip()
+                    descripcion = ""
                 if valor:
                     try:
                         monto = float(valor)
-                        fecha = datetime.now().strftime("%Y-%m-%d")
-                        datos = [fecha, self.usuario, monto, f"{categoria_general} - {campo}", ""]
-                        
-                        guardar_csv(GASTOS_FILE, datos)              # Guardar en CSV
-                        guardar_en_mysql("Gastos", datos)            # Guardar en MySQL
-
                     except ValueError:
                         messagebox.showwarning("Valor inválido", f"El valor de '{campo}' no es válido")
                         return False
+                    fecha = datetime.now().strftime("%Y-%m-%d")
+                    registros.append([fecha, self.usuario, monto, f"{categoria_general} - {campo}", descripcion])
             return True
 
-        if not validar_y_guardar(self.entradas_fijos, "Gastos Fijos"): return
-        if not validar_y_guardar(self.entradas_operacionales, "Gastos Operacionales"): return
-        if not validar_y_guardar(self.entradas_varios, "Gastos Variados"): return
-        
-        messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+        if not recolectar(self.entradas_fijos, "Gastos Fijos"): return
+        if not recolectar(self.entradas_operacionales, "Gastos Operacionales"): return
+        if not recolectar(self.entradas_varios, "Gastos Variados"): return
+        if not registros:
+            messagebox.showwarning("Sin datos", "No se ingresaron gastos válidos")
+            return
+
+        if self.tipo == "admin":
+            for fila in registros:
+                guardar_csv(GASTOS_FILE, fila)
+                guardar_en_mysql("Gastos", fila)
+            messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+            return
+
+        columnas = ["Fecha", "Usuario", "Monto", "Categoría", "Descripción"]
+
+        def validar(dataset):
+            for i, fila in enumerate(dataset, 1):
+                if not fila[0]:
+                    return f"Fila {i}: la fecha es obligatoria"
+                try:
+                    float(str(fila[2]).strip())
+                except:
+                    return f"Fila {i}: el monto debe ser numérico"
+                if not fila[3]:
+                    return f"Fila {i}: la categoría es obligatoria"
+            return True
+
+        def confirmar_guardado(dataset):
+            for fila in dataset:
+                fila[2] = float(str(fila[2]).strip())
+                guardar_csv(GASTOS_FILE, fila)
+                guardar_en_mysql("Gastos", fila)
+            messagebox.showinfo("Éxito", "Gastos guardados correctamente")
+
+        VistaPrevia(
+            master=self.root,
+            columns=columnas,
+            data=registros,
+            on_save=confirmar_guardado,
+            validation_func=validar,
+            title="Vista previa de gastos"
+        )
 
 def mostrar_registrar_ingreso(self):
         ventana = Toplevel(self.root)
-        ventana.title("Registrar Ingresos")
-        ventana.geometry("400x400")
-        usuario_actual = self.usuario  # Guardar el usuario actual en una variable local
+        ventana.title("Registrar Ingreso")
+        ventana.geometry("420x420")
 
         ttkbcliner.Label(ventana, text="Monto del ingreso:", font=("Segoe UI", 12)).pack(pady=8)
         monto_entry = ttkbcliner.Entry(ventana)
@@ -670,76 +843,65 @@ def mostrar_registrar_ingreso(self):
         descripcion_text = Text(ventana, height=4)
         descripcion_text.pack(pady=5, fill='both', padx=20)
 
-        def guardar_ingreso()-> None: # type: ignore
-            print("Ingreso guardado correctamente.")
-            #llama la funcion 
-            guardar_ingreso()
+        def guardar_ingreso():
             monto_str = monto_entry.get().strip()
             if not monto_str:
                 messagebox.showwarning("Entrada requerida", "Ingrese un monto")
                 return
             try:
                 monto = float(monto_str)
-                # Eliminar la línea que usa 'empresa' y 'nombre_campo' porque no existen aquí
-
             except ValueError:
                 messagebox.showwarning("Valor inválido", "El monto debe ser un número")
                 return
+
             fuente = fuente_var.get()
             descripcion = descripcion_text.get("1.0", "end").strip()
             fecha = datetime.now().strftime("%Y-%m-%d")
-            
             datos = [fecha, self.usuario, monto, fuente, descripcion]
-            guardar_csv(INGRESOS_FILE, datos)           # Guardar en CSV
-            guardar_en_mysql("Ingresos", datos)         # Guardar en MySQL
-            print("usuario:", self.usuario)
-            print("Datos a guardar:", datos)
 
-            messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
-            ventana.destroy()
+            if self.tipo == "admin":
+                guardar_csv(INGRESOS_FILE, datos)
+                guardar_en_mysql("Ingresos", datos)
+                messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
+                ventana.destroy()
+                return
 
-        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=self.guardar_ingreso).pack(pady=15)
+            columnas = ["Fecha", "Usuario", "Monto", "Categoría", "Descripción"]
 
-
-def guardar_gastos_empresa(self, empresa, entradas):
-        """Valida y guarda los gastos introducidos en el formulario."""
-        fecha = datetime.now().strftime("%Y-%m-%d")
-        
-        for nombre_campo, entry_widget in entradas.items():
-            monto_str = entry_widget.get().strip()
-            if monto_str:
+            def validar(dataset):
+                fila = dataset[0]
+                if not fila[0]:
+                    return "La fecha es obligatoria"
                 try:
-                    monto = float(monto_str)
-                    datos = [fecha, empresa, monto, f"Gastos Fijos - {nombre_campo}", "Formulario de Admin"]
-                    
-                    guardar_csv(GASTOS_FILE, datos)         # Guardar en CSV
-                    guardar_en_mysql("Gastos", datos)       # Guardar en MySQL
-                    
+                    float(str(fila[2]).strip())
+                except:
+                    return "El monto debe ser numérico"
+                if not fila[3]:
+                    return "La categoría/fuente es obligatoria"
+                return True
 
-                except ValueError:
-                    messagebox.showwarning("Valor Inválido", f"El valor para '{nombre_campo}' no es un número válido y será omitido.")
-                    continue
-        
-        messagebox.showinfo("Éxito", f"Gastos para {empresa} guardados correctamente.")
+            def confirmar_guardado(dataset):
+                fila = dataset[0]
+                fila[2] = float(str(fila[2]).strip())
+                guardar_csv(INGRESOS_FILE, fila)
+                guardar_en_mysql("Ingresos", fila)
+                messagebox.showinfo("Éxito", "Ingreso registrado exitosamente")
+                ventana.destroy()
 
+            VistaPrevia(
+                master=self.root,
+                columns=columnas,
+                data=[datos],
+                on_save=confirmar_guardado,
+                validation_func=validar,
+                title="Vista previa de ingreso"
+            )
 
-def guardar_ingreso_empresa(self, empresa,entradas):
-        """Valida y guarda los ingresos introducidos en el formulario."""
-        fecha = datetime.now().strftime("%Y-%m-%d")
-        
-        for nombre_campo, entry_widget in entradas.items():
-            monto_str = entry_widget.get().strip()
-            if monto_str:
-                try:
-                    monto = float(monto_str)
-                    datos = [fecha, empresa, monto, f"Ingresos - {nombre_campo}", "Formulario de Admin"]
-                    
-                    guardar_csv(INGRESOS_FILE, datos)         # Guardar en CSV
-                    guardar_en_mysql("Ingresos", datos)       # Guardar en MySQL
-                    
+        ttkbcliner.Button(ventana, text="Guardar Ingreso", bootstyle="success", command=guardar_ingreso).pack(pady=15)
 
-                except ValueError:
-                    messagebox.showwarning("Valor Inválido", f"El valor para '{nombre_campo}' no es un número válido y será omitido.")
-                    continue
-        
-        messagebox.showinfo("Éxito", f"Ingresos para {empresa} guardados correctamente.")
+# --- EJECUCIÓN ---
+if __name__ == "__main__":
+    app = ttkbcliner.Window(themename="morph")
+    SistemaFinancieroApp(app)
+    app.mainloop()
+

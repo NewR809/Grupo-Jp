@@ -1,0 +1,110 @@
+/* ====== Reset básico ====== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ====== Estilos generales ====== */
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background-color: #f4f6f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* ====== Encabezado ====== */
+header {
+    background: #2c3e50;
+    color: #fff;
+    padding: 15px 20px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* ====== Barra lateral ====== */
+.sidebar {
+    width: 220px;
+    background: #34495e;
+    color: #ecf0f1;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    padding-top: 60px;
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px 20px;
+    color: #ecf0f1;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.sidebar a:hover {
+    background: #1abc9c;
+    color: #fff;
+}
+
+/* ====== Contenido principal ====== */
+.main-content {
+    margin-left: 240px;
+    padding: 20px;
+}
+
+/* ====== Tablas ====== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+table th, table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+table th {
+    background: #2c3e50;
+    color: #fff;
+    font-weight: bold;
+}
+
+table tr:hover {
+    background: #f1f1f1;
+}
+
+/* ====== Botones ====== */
+button, .btn {
+    display: inline-block;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 4px;
+    background: #1abc9c;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover, .btn:hover {
+    background: #16a085;
+}
+
+/* ====== Formularios ====== */
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+}
