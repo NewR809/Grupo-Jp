@@ -722,7 +722,7 @@ class SistemaFinancieroApp:
         }
 
         # Llamada a la API
-        url = "https://tu-api-consultas.onrender.com/consultas"  # 👈 cambia por tu URL real
+        url = "https://api-powerbi-xoh2.onrender.com"  # 👈 cambia por tu URL real
         try:
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
