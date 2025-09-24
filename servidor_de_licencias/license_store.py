@@ -1,24 +1,28 @@
-# license_store.py
+# servidor_de_licencias/license_store.py
 import mysql.connector
 from contextlib import closing
 from datetime import datetime
-#from config import DB_CONFIG  # 👈 asegúrate de tener DB_CONFIG en config.py con tus credenciales Railway
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from typing import Optional
+import os, sys
 
-from config import DB_CONFIG
+# Ajuste de path para importar config_server
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from servidor_de_licencias.config_server import DB_CONFIG
+
 
 class LicenseStore:
-    def __init__(self,DB_CONFIG):
-        self.DB_CONFIG = DB_CONFIG
+    def __init__(self, db_config: dict = DB_CONFIG):
+        self.DB_CONFIG = db_config
         self._init_db()
 
     def _conn(self):
-        return mysql.connector.connect(**DB_CONFIG)
+        return mysql.connector.connect(**self.DB_CONFIG)
 
     def _init_db(self):
+        """Inicializa las tablas necesarias si no existen"""
         with closing(self._conn()) as conn:
             cur = conn.cursor()
+
             # Tabla de dispositivos
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS devices (
@@ -29,6 +33,7 @@ class LicenseStore:
                     registered_at DATETIME NOT NULL
                 )
             """)
+
             # Tabla de auditoría
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS audits (
@@ -38,6 +43,7 @@ class LicenseStore:
                     ts DATETIME NOT NULL
                 )
             """)
+
             # Tabla de usuarios
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
@@ -47,16 +53,31 @@ class LicenseStore:
                     role ENUM('visor','admin') NOT NULL
                 )
             """)
+
+            # Tabla de licencias
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS licencias (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    clave VARCHAR(100) UNIQUE NOT NULL,
+                    cliente VARCHAR(100) NOT NULL,
+                    activa BOOLEAN DEFAULT TRUE,
+                    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             # Crear usuario inicial "visor" si no existe
             cur.execute("SELECT 1 FROM usuarios WHERE username=%s", ("visor",))
             if not cur.fetchone():
-                cur.execute("INSERT INTO usuarios (username, password, role) VALUES (%s, %s, %s)",
-                            ("visor", "visorsecret", "visor"))
+                cur.execute(
+                    "INSERT INTO usuarios (username, password, role) VALUES (%s, %s, %s)",
+                    ("visor", "visorsecret", "visor")
+                )
+
             conn.commit()
 
     # ------------------- Gestión de dispositivos -------------------
 
-    def register_device(self, device_id: str, alias: str | None, usuario: str | None):
+    def register_device(self, device_id: str, alias: Optional[str], usuario: Optional[str]):
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         with closing(self._conn()) as conn:
             cur = conn.cursor()
@@ -97,10 +118,10 @@ class LicenseStore:
                 SELECT device_id, alias, usuario, estado, registered_at
                 FROM devices ORDER BY registered_at DESC
             """)
-            cols = ["device_id","alias","usuario","estado","registered_at"]
+            cols = ["device_id", "alias", "usuario", "estado", "registered_at"]
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    def audits(self, device_id: str | None = None):
+    def audits(self, device_id: Optional[str] = None):
         with closing(self._conn()) as conn:
             cur = conn.cursor()
             if device_id:
@@ -110,7 +131,7 @@ class LicenseStore:
                 """, (device_id,))
             else:
                 cur.execute("SELECT id, device_id, action, ts FROM audits ORDER BY ts DESC")
-            cols = ["id","device_id","action","ts"]
+            cols = ["id", "device_id", "action", "ts"]
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
     # ------------------- Gestión de usuarios -------------------
@@ -126,7 +147,7 @@ class LicenseStore:
         with closing(self._conn()) as conn:
             cur = conn.cursor()
             cur.execute("SELECT id, username, role FROM usuarios ORDER BY id ASC")
-            cols = ["id","username","role"]
+            cols = ["id", "username", "role"]
             return [dict(zip(cols, r)) for r in cur.fetchall()]
 
     def get_user(self, username: str):

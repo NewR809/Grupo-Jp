@@ -69,7 +69,7 @@ def guardar_en_mysql(tabla, datos):
             """
         elif tabla.lower() == "ingresos":
             query = """
-                INSERT INTO ingresos (fecha, usuario, monto, fuente, descripcion)
+                INSERT INTO ingresos (fecha, usuario, monto, categoria, descripcion)
                 VALUES (%s, %s, %s, %s, %s)
             """
         else:

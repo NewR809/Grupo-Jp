@@ -62,7 +62,7 @@ def insertar_gasto():
 def insertar_ingreso():
     try:
         data = request.get_json(force=True, silent=False)
-        requerido = ["fecha", "fuente", "monto", "descripcion"]
+        requerido = ["fecha", "categoria", "monto", "descripcion"]
         faltan = [k for k in requerido if k not in data]
         if faltan:
             return jsonify({"error": f"Faltan campos: {', '.join(faltan)}"}), 400

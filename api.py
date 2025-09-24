@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 from functools import wraps
 import mysql.connector
 from db import consultar_tabla, insertar_en_tabla
+from config import USERNAME, PASSWORD, DB_CONFIG
 
 # --- Autenticación básica ---
 def autenticar(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth = request.authorization
-        if not auth or not (auth.username == "powerbi" and auth.password == "secure123"):
+        if not auth or not (auth.username == USERNAME and auth.password == PASSWORD):
             return jsonify({"error": "No autorizado"}), 401
         return f(*args, **kwargs)
     return decorated_function
@@ -16,22 +17,22 @@ def autenticar(f):
 # --- Crear app Flask ---
 app = Flask(__name__)
 
-# --- Configuración DB para consultas ---
-DB_CONFIG = {
-    "host": "gondola.proxy.rlwy.net",
-    "user": "root",
-    "password": "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
-    "database": "railway",
-    "port": 18615
-}
-
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
 
-# --- Ruta principal ---
+# ============================================================
+# 🔑 Panel de Licencias en la raíz
+# ============================================================
+
 @app.route("/")
 def home():
-    return "API Financiera + Servidor de Licencias funcionando 🚀"
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM licencias")
+    licencias = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("panel.html", licencias=licencias)
 
 # ============================================================
 # 🔑 Endpoints de Licencias
@@ -39,36 +40,73 @@ def home():
 
 @app.route("/licencias/validar", methods=["GET"])
 def validar_licencia():
-    """
-    Endpoint de validación de licencias.
-    Aquí puedes implementar tu lógica real:
-    - Verificar una clave enviada por query param o header
-    - Consultar en DB si la licencia existe y está activa
-    """
     clave = request.args.get("clave")
-    if clave == "ABC123":  # ejemplo de validación simple
-        return jsonify({"status": "ok", "mensaje": "Licencia válida"}), 200
-    else:
-        return jsonify({"status": "error", "mensaje": "Licencia inválida"}), 401
+    if not clave:
+        return jsonify({"status": "error", "mensaje": "Falta la clave"}), 400
 
-@app.route("/licencias/registrar", methods=["POST"])
-def registrar_licencia():
-    """
-    Endpoint para registrar una nueva licencia.
-    """
-    data = request.get_json(force=True, silent=False)
-    # Aquí podrías guardar en DB la licencia
-    return jsonify({"status": "ok", "mensaje": "Licencia registrada", "data": data}), 201
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM licencias WHERE clave=%s AND activa=1", (clave,))
+    licencia = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if licencia:
+        return jsonify({
+            "status": "ok",
+            "mensaje": "Licencia válida",
+            "cliente": licencia["cliente"]
+        }), 200
+    else:
+        return jsonify({"status": "error", "mensaje": "Licencia inválida o inactiva"}), 401
+
+@app.route("/solicitar_licencia", methods=["POST"])
+def solicitar_licencia():
+    data = request.get_json(force=True)
+    clave = data.get("clave")
+    cliente = data.get("cliente")
+
+    if not clave or not cliente:
+        return jsonify({"status": "error", "mensaje": "Faltan datos"}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO licencias (clave, cliente, activa) VALUES (%s, %s, 0)", (clave, cliente))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"status": "ok", "mensaje": "Solicitud registrada, pendiente de aprobación"}), 201
+
+@app.route("/activar/<int:licencia_id>")
+def activar_licencia(licencia_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE licencias SET activa=1 WHERE id=%s", (licencia_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("home"))
+
+@app.route("/desactivar/<int:licencia_id>")
+def desactivar_licencia(licencia_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE licencias SET activa=0 WHERE id=%s", (licencia_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("home"))
 
 # ============================================================
-# 📊 Endpoints Financieros
+# 📊 Endpoints Financieros (sin cambios)
 # ============================================================
 
 @app.route("/consultar_gastos", methods=["GET"])
 @autenticar
 def consultar_gastos():
     try:
-        resultados = consultar_tabla("Gastos")
+        resultados = consultar_tabla("gastos")
         return jsonify(resultados), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -77,7 +115,7 @@ def consultar_gastos():
 @autenticar
 def consultar_ingresos():
     try:
-        resultados = consultar_tabla("Ingresos")
+        resultados = consultar_tabla("ingresos")
         return jsonify(resultados), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -92,7 +130,7 @@ def insertar_gasto():
         if faltan:
             return jsonify({"error": f"Faltan campos: {', '.join(faltan)}"}), 400
 
-        insertar_en_tabla("Gastos", data)
+        insertar_en_tabla("gastos", data)
         return jsonify({"mensaje": "Gasto insertado correctamente"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -102,12 +140,12 @@ def insertar_gasto():
 def insertar_ingreso():
     try:
         data = request.get_json(force=True, silent=False)
-        requerido = ["fecha", "fuente", "monto", "descripcion"]
+        requerido = ["fecha", "categoria", "monto", "descripcion"]
         faltan = [k for k in requerido if k not in data]
         if faltan:
             return jsonify({"error": f"Faltan campos: {', '.join(faltan)}"}), 400
 
-        insertar_en_tabla("Ingresos", data)
+        insertar_en_tabla("ingresos", data)
         return jsonify({"mensaje": "Ingreso insertado correctamente"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -116,17 +154,17 @@ def insertar_ingreso():
 @autenticar
 def datos():
     try:
-        gastos = consultar_tabla("Gastos")
-        ingresos = consultar_tabla("Ingresos")
+        gastos = consultar_tabla("gastos")
+        ingresos = consultar_tabla("ingresos")
         return jsonify({
-            "Gastos": gastos,
-            "Ingresos": ingresos
+            "gastos": gastos,
+            "ingresos": ingresos
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ============================================================
-# 🔎 Endpoint de Consultas con filtros y recurrente
+# 🔎 Consultas con filtros
 # ============================================================
 
 @app.route("/consultas", methods=["GET"])
@@ -140,7 +178,6 @@ def consultas():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # --- Gastos ---
     query_gastos = "SELECT fecha, usuario, monto, categoria, descripcion FROM gastos WHERE 1=1"
     if empresa: query_gastos += f" AND usuario='{empresa}'"
     if anio: query_gastos += f" AND YEAR(fecha)={anio}"
@@ -150,8 +187,7 @@ def consultas():
     cursor.execute(query_gastos)
     gastos = cursor.fetchall()
 
-    # --- Ingresos ---
-    query_ingresos = "SELECT fecha, usuario, monto, fuente, descripcion FROM ingresos WHERE 1=1"
+    query_ingresos = "SELECT fecha, usuario, monto, categoria, descripcion FROM ingresos WHERE 1=1"
     if empresa: query_ingresos += f" AND usuario='{empresa}'"
     if anio: query_ingresos += f" AND YEAR(fecha)={anio}"
     if mes: query_ingresos += f" AND MONTH(fecha)={mes}"
@@ -160,10 +196,9 @@ def consultas():
     cursor.execute(query_ingresos)
     ingresos = cursor.fetchall()
 
-    # --- Gasto más recurrente del mes ---
     recurrente = []
     if empresa:
-        if not mes:  # si no se pasa mes, usar el actual
+        if not mes:
             cursor.execute("SELECT MONTH(CURDATE()) as mes_actual")
             mes = cursor.fetchone()["mes_actual"]
 

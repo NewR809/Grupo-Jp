@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, jsonify
 from flask_httpauth import HTTPBasicAuth
 import os
 
@@ -12,20 +12,10 @@ from servidor_de_licencias.config_server import (
 )
 
 from servidor_de_licencias.license_store import LicenseStore
-from api_blueprint import api_bp   # 👈 Importamos el Blueprint de la API
-from flask import Blueprint
 
-license_bp = Blueprint("license", __name__)
-
-@license_bp.route("/licencia", methods=["GET"])
-def validar_licencia():
-    return {"status": "ok", "mensaje": "Licencia válida"}
 # Inicializa Flask y autenticación
 app = Flask(__name__)
 auth = HTTPBasicAuth()
-
-# Registrar el Blueprint de la API bajo /api
-app.register_blueprint(api_bp)
 
 # Inicializa la capa de almacenamiento con MySQL en Railway
 store = LicenseStore(DB_CONFIG)
@@ -50,7 +40,77 @@ def get_user_roles(username):
         return user.get("role")
     return None
 
-# ------------------- Rutas del panel -------------------
+# ============================================================
+# 🔑 Panel de Licencias en la raíz
+# ============================================================
+
+@app.route("/", methods=["GET"])
+@auth.login_required
+def home():
+    current_role = get_user_roles(auth.current_user())
+    if current_role not in ("admin", "visor"):
+        return "No autorizado", 403
+    conn = store._conn()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT * FROM licencias ORDER BY fecha_registro DESC")
+    licencias = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template("index.html", licencias=licencias, role=current_role, title="Panel de Licencias")
+
+@app.route("/activar/<int:licencia_id>")
+@auth.login_required
+def activar_licencia(licencia_id):
+    current_role = get_user_roles(auth.current_user())
+    if current_role != "visor":
+        return "No autorizado", 403
+    conn = store._conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE licencias SET activa=1 WHERE id=%s", (licencia_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("home"))
+
+@app.route("/desactivar/<int:licencia_id>")
+@auth.login_required
+def desactivar_licencia(licencia_id):
+    current_role = get_user_roles(auth.current_user())
+    if current_role != "visor":
+        return "No autorizado", 403
+    conn = store._conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE licencias SET activa=0 WHERE id=%s", (licencia_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for("home"))
+
+# ============================================================
+# 📩 Endpoint para solicitudes de nuevas máquinas
+# ============================================================
+
+@app.route("/solicitar_licencia", methods=["POST"])
+def solicitar_licencia():
+    data = request.get_json(force=True)
+    clave = data.get("clave")
+    cliente = data.get("cliente")
+
+    if not clave or not cliente:
+        return jsonify({"status": "error", "mensaje": "Faltan datos"}), 400
+
+    conn = store._conn()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO licencias (clave, cliente, activa) VALUES (%s, %s, 0)", (clave, cliente))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"status": "ok", "mensaje": "Solicitud registrada, pendiente de aprobación"}), 201
+
+# ============================================================
+# 📊 Panel de Devices y Usuarios (ya existentes)
+# ============================================================
 
 @app.route("/panel/devices", methods=["GET"])
 @auth.login_required
@@ -98,7 +158,7 @@ def manage_users():
         new_role = request.form.get("role")
         if username and password and new_role in ("admin", "visor"):
             USERS[username] = {"password": password, "role": new_role}
-    return render_template("users.html", users=USERS, title="Gestión de Usuarios")
+    return render_template("users.html", users=store.list_users(), title="Gestión de Usuarios")
 
 # ------------------- Punto de entrada -------------------
 if __name__ == "__main__":

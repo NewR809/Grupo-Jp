@@ -1,4 +1,13 @@
 #IMPORTACIONES
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from db import guardar_en_mysql
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from dotenv import load_dotenv
+load_dotenv()
+from db import guardar_en_mysql
 import os
 import csv
 import pandas as pd
@@ -22,9 +31,18 @@ from conexion import crear_conexion
 from base_datos import guardar_en_mysql
 from archivos import guardar_csv, leer_csv
 #3
-from preview_module import VistaPrevia
+
+# from desktop.gastos_handler import procesar_gasto  # Eliminado: módulo no encontrado
 #$60
 import requests
+from db import guardar_en_mysql
+from archivos import guardar_csv, leer_csv
+from conexion import crear_conexion
+from desktop.preview_module import VistaPrevia
+from desktop.vista_previa import VistaPreviaEditable
+from desktop.ingresos_handler import procesar_ingreso
+
+
 
 # --- Configuración de conexión MySQL ---
 DB_CONFIG = {

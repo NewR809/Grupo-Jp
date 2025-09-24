@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
+<head>:<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
   <meta charset="UTF-8">
   <title>{{ title or "Panel de Licencias" }}</title>
   <!-- Tema Bootswatch Morph -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/morph/bootstrap.min.css">
-  <!-- Estilos personalizados (opcional) -->
+  <!-- Estilos personalizados -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 </head>
 <body class="app-container">
   <!-- Barra de navegación -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ url_for('panel_devices') }}">🔑 Panel de Licencias</a>
+      <a class="navbar-brand" href="{{ url_for('home') }}">🔑 Panel de Licencias</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
               aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" 
+               href="{{ url_for('home') }}">Licencias</a>
+          </li>
           <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'panel_devices' %}active{% endif %}" 
                href="{{ url_for('panel_devices') }}">Dispositivos</a>

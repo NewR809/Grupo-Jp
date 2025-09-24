@@ -5,3 +5,6 @@ gunicorn
 pandas
 openpyxl
 requests
+ttkbootstrap
+pillow
+matplotlib

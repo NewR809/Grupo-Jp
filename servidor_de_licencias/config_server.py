@@ -20,3 +20,8 @@ DB_CONFIG = {
 
 # Alias para compatibilidad con tu código existente
 DB_PATH = DB_CONFIG
+
+# Validación opcional: si falta alguna variable crítica, lanza error
+for key, value in DB_CONFIG.items():
+    if value is None:
+        raise RuntimeError(f"⚠️ Variable de entorno faltante: {key}")

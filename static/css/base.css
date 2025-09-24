@@ -1,110 +1,94 @@
-/* ====== Reset básico ====== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* ====== Estilos generales ====== */
-body {
-    font-family: "Segoe UI", Arial, sans-serif;
-    background-color: #f4f6f9;
+/* ====== Estilos base para el panel ====== */
+body.app-container {
+    background-color: #f8f9fa;
     color: #333;
-    line-height: 1.6;
 }
 
-/* ====== Encabezado ====== */
-header {
-    background: #2c3e50;
-    color: #fff;
-    padding: 15px 20px;
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-/* ====== Barra lateral ====== */
-.sidebar {
-    width: 220px;
-    background: #34495e;
-    color: #ecf0f1;
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    padding-top: 60px;
-}
-
-.sidebar a {
-    display: block;
-    padding: 12px 20px;
-    color: #ecf0f1;
-    text-decoration: none;
-    transition: background 0.3s;
-}
-
-.sidebar a:hover {
-    background: #1abc9c;
-    color: #fff;
-}
-
-/* ====== Contenido principal ====== */
-.main-content {
-    margin-left: 240px;
-    padding: 20px;
+/* ====== Navbar ====== */
+.app-navbar {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
 }
 
 /* ====== Tablas ====== */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
+.app-table {
     background: #fff;
     border-radius: 6px;
     overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,.05);
 }
 
-table th, table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
+.app-table th {
+    background-color: #e9ecef;
+    font-weight: 600;
 }
 
-table th {
-    background: #2c3e50;
-    color: #fff;
-    font-weight: bold;
+.app-table td, 
+.app-table th {
+    vertical-align: middle;
+    text-align: center;
 }
 
-table tr:hover {
-    background: #f1f1f1;
-}
-
-/* ====== Botones ====== */
-button, .btn {
-    display: inline-block;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 4px;
-    background: #1abc9c;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-button:hover, .btn:hover {
-    background: #16a085;
+.app-empty {
+    text-align: center;
+    font-style: italic;
+    color: #888;
 }
 
 /* ====== Formularios ====== */
-input, select, textarea {
-    width: 100%;
-    padding: 10px;
-    margin: 6px 0 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+.app-form {
+    padding: 15px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.05);
 }
 
-label {
-    font-weight: bold;
-    margin-bottom: 5px;
-    display: block;
+.app-form input, 
+.app-form select {
+    margin-bottom: 10px;
+}
+
+/* ====== Botones personalizados ====== */
+.btn-primary {
+    background-color: #007bff;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border: none;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border: none;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+/* ====== Tarjetas ====== */
+.app-card {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.05);
+}
+
+/* ====== Acciones ====== */
+.app-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }

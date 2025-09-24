@@ -1,6 +1,8 @@
--- Tabla de Ingresos
-#actualizacion de tablas
--- Tabla de gastos
+-- ============================================
+-- 📊 Tablas Financieras
+-- ============================================
+
+-- Tabla de Gastos
 CREATE TABLE IF NOT EXISTS gastos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id VARCHAR(100) NULL,
@@ -12,7 +14,7 @@ CREATE TABLE IF NOT EXISTS gastos (
     descripcion TEXT
 );
 
--- Tabla de ingresos
+-- Tabla de Ingresos
 CREATE TABLE IF NOT EXISTS ingresos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     cliente_id VARCHAR(100) NULL,
@@ -24,28 +26,41 @@ CREATE TABLE IF NOT EXISTS ingresos (
     descripcion TEXT
 );
 
--- Tabla de auditoría de sesiones (opcional, para control de accesos)
+-- ============================================
+-- 🔑 Tabla de Licencias
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS licencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    clave VARCHAR(100) UNIQUE NOT NULL,
+    cliente VARCHAR(100) NOT NULL,
+    activa BOOLEAN DEFAULT TRUE,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
+-- 👤 Tabla de Usuarios (para roles)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('visor','admin') NOT NULL
+);
+
+-- Usuario inicial con rol "visor"
+INSERT INTO usuarios (username, password, role)
+VALUES ('visor', 'visorsecret', 'visor')
+ON DUPLICATE KEY UPDATE username=username;
+
+-- ============================================
+-- 📜 Tabla de Auditoría de Sesiones
+-- ============================================
+
 CREATE TABLE IF NOT EXISTS log_sesiones (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario VARCHAR(100) NOT NULL,
     accion VARCHAR(50) NOT NULL, -- login, logout, bloqueo, etc.
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-RENAME TABLE Gastos TO gastos;
-RENAME TABLE Ingresos TO ingresos;
-ALTER USER 'root'@'%' IDENTIFIED WITH 'mysql_native_password' BY 'tu_contraseña';
-
-ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'TU_PASSWORD';
-FLUSH PRIVILEGES;
-
--- Tabla de usuarios
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY AUTO-INCREMENT,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK(role IN ('visor','admin'))
-);
-
--- Usuario inicial con rol "visor" (superusuario)
-INSERT INTO usuarios (username, password, role)
-VALUES ('visor', 'visorsecret', 'visor');

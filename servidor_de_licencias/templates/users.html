@@ -27,21 +27,25 @@
 <table class="table table-bordered app-table">
   <thead>
     <tr>
+      <th>ID</th>
       <th>Usuario</th>
       <th>Rol</th>
     </tr>
   </thead>
   <tbody>
-    {% for u, info in users.items() %}
-    <tr>
-      <td>{{ u }}</td>
-      <td>{{ info["role"] }}</td>
-    </tr>
+    {% if users %}
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.username }}</td>
+        <td>{{ u.role }}</td>
+      </tr>
+      {% endfor %}
     {% else %}
-    <tr>
-      <td colspan="2" class="app-empty">No hay usuarios registrados</td>
-    </tr>
-    {% endfor %}
+      <tr>
+        <td colspan="3" class="app-empty">No hay usuarios registrados</td>
+      </tr>
+    {% endif %}
   </tbody>
 </table>
 {% endblock %}

@@ -3,9 +3,10 @@
 from datetime import datetime
 from tkinter import messagebox
 from base_datos import guardar_en_mysql
-from app import guardar_csv, INGRESOS_FILE
+from desktop.utils import guardar_csv, INGRESOS_FILE
 
-def procesar_ingreso(usuario, monto_str, fuente, descripcion, ventana=None):
+
+def procesar_ingreso(usuario, monto_str, categoria, descripcion, ventana=None):
     if not monto_str:
         messagebox.showwarning("Entrada requerida", "Ingrese un monto")
         return
@@ -17,7 +18,7 @@ def procesar_ingreso(usuario, monto_str, fuente, descripcion, ventana=None):
         return
 
     fecha = datetime.now().strftime("%Y-%m-%d")
-    datos = [fecha, usuario, monto, fuente, descripcion]
+    datos = [fecha, usuario, monto, categoria, descripcion]
 
     try:
         guardar_csv(INGRESOS_FILE, datos)

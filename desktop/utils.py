@@ -3,6 +3,16 @@ import os
 import mysql.connector
 from tkinter import messagebox
 
+
+INGRESOS_FILE = "data/ingresos.csv"
+
+def guardar_csv(archivo, datos):
+    os.makedirs(os.path.dirname(archivo), exist_ok=True)
+    with open(archivo, mode="a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(datos)
+
+
 # --- Guardar en CSV ---
 def guardar_csv(archivo, datos):
     try:
@@ -21,7 +31,7 @@ def leer_csv(archivo):
             return list(csv.reader(f))
     except Exception as e:
         messagebox.showerror("Error al leer CSV", str(e))
-        return []
+        return []   
 
 # --- Guardar en MySQL (Railway) ---
 def guardar_en_mysql(tabla, datos):
@@ -46,6 +56,7 @@ def guardar_en_mysql(tabla, datos):
         conn.commit()
         cursor.close()
         conn.close()
+
 
     except mysql.connector.Error as err:
         messagebox.showerror("Error MySQL", f"No se pudo guardar en la base de datos:\n{err}")
