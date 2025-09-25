@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_httpauth import HTTPBasicAuth
-from api_blueprint import api_bp   # importa tu blueprint
-#from licenses_blueprint import licenses_bp  # importa el blueprint de licencias
-from api import api_bp as licenses_bp  # importa el blueprint de licencias
+from api_blueprint import api_bp as powerbi_bp   # Blueprint de Power BI
+from api import api_bp as licenses_bp            # Blueprint de licencias y finanzas
+
 # --- Crear aplicación principal ---
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -12,9 +12,9 @@ users = {
     "powerbi": "secure123"
 }
 
-# --- Registrar blueprint ---
-app.register_blueprint(api_bp)
-app.register_blueprint(licenses_bp)  # Registrar el blueprint de licencias
+# --- Registrar blueprints ---
+app.register_blueprint(powerbi_bp)
+app.register_blueprint(licenses_bp)
 
 # --- Autenticación básica con HTTPBasicAuth ---
 @auth.verify_password
