@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from functools import wraps
 import mysql.connector
 from db import consultar_tabla, insertar_en_tabla
 from config import USERNAME, PASSWORD, DB_CONFIG
+
+# --- Crear Blueprint ---
+api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 # --- Autenticación básica ---
 def autenticar(f):
@@ -14,17 +17,15 @@ def autenticar(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- Crear app Flask ---
-app = Flask(__name__)
-
+# --- Conexión a la base de datos ---
 def get_connection():
     return mysql.connector.connect(**DB_CONFIG)
 
 # ============================================================
-# 🔑 Panel de Licencias en la raíz
+# 🔑 Panel de Licencias en la raíz del blueprint
 # ============================================================
 
-@app.route("/")
+@api_bp.route("/")
 def home():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -38,7 +39,7 @@ def home():
 # 🔑 Endpoints de Licencias
 # ============================================================
 
-@app.route("/licencias/validar", methods=["GET"])
+@api_bp.route("/licencias/validar", methods=["GET"])
 def validar_licencia():
     clave = request.args.get("clave")
     if not clave:
@@ -60,7 +61,7 @@ def validar_licencia():
     else:
         return jsonify({"status": "error", "mensaje": "Licencia inválida o inactiva"}), 401
 
-@app.route("/solicitar_licencia", methods=["POST"])
+@api_bp.route("/solicitar_licencia", methods=["POST"])
 def solicitar_licencia():
     data = request.get_json(force=True)
     clave = data.get("clave")
@@ -78,7 +79,7 @@ def solicitar_licencia():
 
     return jsonify({"status": "ok", "mensaje": "Solicitud registrada, pendiente de aprobación"}), 201
 
-@app.route("/activar/<int:licencia_id>")
+@api_bp.route("/activar/<int:licencia_id>")
 def activar_licencia(licencia_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -86,9 +87,9 @@ def activar_licencia(licencia_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for("home"))
+    return redirect(url_for("api.home"))
 
-@app.route("/desactivar/<int:licencia_id>")
+@api_bp.route("/desactivar/<int:licencia_id>")
 def desactivar_licencia(licencia_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -96,13 +97,13 @@ def desactivar_licencia(licencia_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for("home"))
+    return redirect(url_for("api.home"))
 
 # ============================================================
-# 📊 Endpoints Financieros (sin cambios)
+# 📊 Endpoints Financieros
 # ============================================================
 
-@app.route("/consultar_gastos", methods=["GET"])
+@api_bp.route("/consultar_gastos", methods=["GET"])
 @autenticar
 def consultar_gastos():
     try:
@@ -111,7 +112,7 @@ def consultar_gastos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/consultar_ingresos", methods=["GET"])
+@api_bp.route("/consultar_ingresos", methods=["GET"])
 @autenticar
 def consultar_ingresos():
     try:
@@ -120,7 +121,7 @@ def consultar_ingresos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/insertar_gasto", methods=["POST"])
+@api_bp.route("/insertar_gasto", methods=["POST"])
 @autenticar
 def insertar_gasto():
     try:
@@ -135,7 +136,7 @@ def insertar_gasto():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/insertar_ingreso", methods=["POST"])
+@api_bp.route("/insertar_ingreso", methods=["POST"])
 @autenticar
 def insertar_ingreso():
     try:
@@ -150,7 +151,7 @@ def insertar_ingreso():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/datos", methods=["GET"])
+@api_bp.route("/datos", methods=["GET"])
 @autenticar
 def datos():
     try:
@@ -167,7 +168,7 @@ def datos():
 # 🔎 Consultas con filtros
 # ============================================================
 
-@app.route("/consultas", methods=["GET"])
+@api_bp.route("/consultas", methods=["GET"])
 def consultas():
     empresa = request.args.get("empresa")
     anio = request.args.get("anio")
@@ -220,7 +221,3 @@ def consultas():
         "ingresos": ingresos,
         "recurrente": recurrente
     })
-
-# --- Punto de entrada ---
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)

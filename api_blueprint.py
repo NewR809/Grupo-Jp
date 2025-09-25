@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from functools import wraps
 from db import consultar_tabla, insertar_en_tabla
 
+api_bp = Blueprint("api", __name__, url_prefix="/api")
+
 # --- Autenticación básica ---
 def autenticar(f):
     @wraps(f)
