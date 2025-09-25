@@ -3,6 +3,8 @@ from functools import wraps
 import mysql.connector
 from db import consultar_tabla, insertar_en_tabla
 from config import USERNAME, PASSWORD, DB_CONFIG
+from . import api_bp
+
 
 # --- Crear Blueprint ---
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -176,48 +178,64 @@ def consultas():
     semana = request.args.get("semana")
     dia = request.args.get("dia")
 
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cur = conn.cursor(dictionary=True)
 
-    query_gastos = "SELECT fecha, usuario, monto, categoria, descripcion FROM gastos WHERE 1=1"
-    if empresa: query_gastos += f" AND usuario='{empresa}'"
-    if anio: query_gastos += f" AND YEAR(fecha)={anio}"
-    if mes: query_gastos += f" AND MONTH(fecha)={mes}"
-    if semana: query_gastos += f" AND WEEK(fecha)={semana}"
-    if dia: query_gastos += f" AND DAY(fecha)={dia}"
-    cursor.execute(query_gastos)
-    gastos = cursor.fetchall()
+        # --- Construcción dinámica de filtros ---
+        filtros = []
+        valores = []
 
-    query_ingresos = "SELECT fecha, usuario, monto, categoria, descripcion FROM ingresos WHERE 1=1"
-    if empresa: query_ingresos += f" AND usuario='{empresa}'"
-    if anio: query_ingresos += f" AND YEAR(fecha)={anio}"
-    if mes: query_ingresos += f" AND MONTH(fecha)={mes}"
-    if semana: query_ingresos += f" AND WEEK(fecha)={semana}"
-    if dia: query_ingresos += f" AND DAY(fecha)={dia}"
-    cursor.execute(query_ingresos)
-    ingresos = cursor.fetchall()
+        if empresa:
+            filtros.append("empresa = %s")
+            valores.append(empresa)
 
-    recurrente = []
-    if empresa:
-        if not mes:
-            cursor.execute("SELECT MONTH(CURDATE()) as mes_actual")
-            mes = cursor.fetchone()["mes_actual"]
+        if anio:
+            filtros.append("YEAR(fecha) = %s")
+            valores.append(anio)
 
-        cursor.execute(f"""
-            SELECT categoria, COUNT(*) as repeticiones
-            FROM gastos
-            WHERE usuario='{empresa}' AND MONTH(fecha)={mes}
-            GROUP BY categoria
-            ORDER BY repeticiones DESC
-            LIMIT 1
-        """)
-        recurrente = cursor.fetchall()
+        if mes:
+            filtros.append("MONTH(fecha) = %s")
+            valores.append(mes)
 
-    cursor.close()
-    conn.close()
+        if semana:
+            filtros.append("WEEK(fecha, 1) = %s")  # semana ISO
+            valores.append(semana)
 
-    return jsonify({
-        "gastos": gastos,
-        "ingresos": ingresos,
-        "recurrente": recurrente
-    })
+        if dia:
+            filtros.append("DAY(fecha) = %s")
+            valores.append(dia)
+
+        where_clause = " AND ".join(filtros) if filtros else "1=1"
+
+        # --- Consultas SQL ---
+        cur.execute(f"SELECT * FROM gastos WHERE {where_clause}", valores)
+        gastos = cur.fetchall()
+
+        cur.execute(f"SELECT * FROM ingresos WHERE {where_clause}", valores)
+        ingresos = cur.fetchall()
+
+        # --- Gasto recurrente (categoría más repetida por mes) ---
+        recurrente = []
+        if mes:
+            cur.execute(f"""
+                SELECT MONTH(fecha) AS mes, categoria, COUNT(*) AS repeticiones
+                FROM gastos
+                WHERE {where_clause}
+                GROUP BY mes, categoria
+                ORDER BY repeticiones DESC
+                LIMIT 5
+            """, valores)
+            recurrente = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "gastos": gastos,
+            "ingresos": ingresos,
+            "recurrente": recurrente
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

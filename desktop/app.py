@@ -721,7 +721,8 @@ class SistemaFinancieroApp:
             )
         ).pack(side="left", padx=10)
 
-#código corregido de la función ejecutar_consulta 2
+# --- Función corregida ---
+
 
     def ejecutar_consulta(self, empresa, combo_anio, combo_mes, combo_semana, combo_dia,
                          tabla_gastos, tabla_ingresos, tabla_recurrentes):
@@ -739,12 +740,14 @@ class SistemaFinancieroApp:
             "dia": combo_dia.get().strip()
         }
 
-        # Llamada a la API
-        url = "https://api-powerbi-xoh2.onrender.com"  # 👈 cambia por tu URL real
+       # Endpoint correcto de la API
+        url = "https://api-powerbi-xoh2.onrender.com/api/consultas"  # 👈 cambia por tu URL real
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=15, auth=("powerbi", "secure123"))
             response.raise_for_status()
+
             data = response.json()
+            
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo obtener datos de la API: {e}")
             return

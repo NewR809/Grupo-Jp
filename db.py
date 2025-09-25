@@ -4,10 +4,16 @@
 from conexion import crear_conexion
 from tkinter import messagebox
 
+from conexion import crear_conexion
+
+# --- Insertar en tabla ---
 def insertar_en_tabla(nombre_tabla, cliente_id, dato, usuario, monto, categoria, descripcion):
     conn = None
     cur = None
     try:
+        if nombre_tabla.lower() not in ["gastos", "ingresos"]:
+            raise ValueError(f"Tabla no soportada: {nombre_tabla}")
+
         conn = crear_conexion()
         cur = conn.cursor()
         query = f"""
@@ -20,24 +26,23 @@ def insertar_en_tabla(nombre_tabla, cliente_id, dato, usuario, monto, categoria,
         print(f"✅ Registro insertado en {nombre_tabla}: {valores}")
     except Exception as e:
         print(f"❌ Error al insertar en {nombre_tabla}:", e)
-        try:
-            messagebox.showerror("Error al insertar en tabla", str(e))
-        except:
-            pass
         if conn:
             conn.rollback()
+        raise   # 👈 importante: propagar el error a la API
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()  # 👈 devuelve la conexión al pool
+        if cur: cur.close()
+        if conn: conn.close()
 
+# --- Consultar tabla ---
 def consultar_tabla(tabla):
     conn = None
     cur = None
     try:
+        if tabla.lower() not in ["gastos", "ingresos"]:
+            raise ValueError(f"Tabla no soportada: {tabla}")
+
         conn = crear_conexion()
-        cur = conn.cursor(dictionary=True)  # resultados como diccionarios
+        cur = conn.cursor(dictionary=True)
         cur.execute(f"SELECT * FROM {tabla}")
         resultados = cur.fetchall()
         print(f"📊 {len(resultados)} registros obtenidos de {tabla}")
@@ -46,16 +51,11 @@ def consultar_tabla(tabla):
         print(f"❌ Error al consultar {tabla}:", e)
         return []
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
 
+# --- Guardar en MySQL ---
 def guardar_en_mysql(tabla, datos):
-    """
-    Inserta un registro en la tabla indicada.
-    datos debe ser una tupla con el orden correcto según la tabla.
-    """
     conn = None
     cur = None
     try:
@@ -80,14 +80,9 @@ def guardar_en_mysql(tabla, datos):
         print(f"✅ Datos guardados en {tabla}: {datos}")
     except Exception as e:
         print(f"❌ Error al guardar en {tabla}:", e)
-        try:
-            messagebox.showerror("Error al guardar en MySQL", str(e))
-        except:
-            pass
         if conn:
             conn.rollback()
+        raise
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
