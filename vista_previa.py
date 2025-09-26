@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
-from desktop.utils import guardar_csv, guardar_en_mysql
+from utils import guardar_csv, guardar_en_mysql
 
 class VistaPreviaEditable(tk.Toplevel):
     def __init__(self, master, datos, columnas, tipo, confirm_callback=None):

@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_httpauth import HTTPBasicAuth
-from api_blueprint import api_bp as powerbi_bp   # Blueprint de Power BI
-from api import api_bp as licenses_bp            # Blueprint de licencias y finanzas
+from api_blueprint import  powerbi_bp   # Blueprint de Power BI
+from api import  licenses_bp            # Blueprint de licencias y finanzas
+
+
 
 # --- Crear aplicación principal ---
 app = Flask(__name__)

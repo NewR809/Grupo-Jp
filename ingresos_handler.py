@@ -3,7 +3,7 @@
 from datetime import datetime
 from tkinter import messagebox
 from base_datos import guardar_en_mysql
-from desktop.utils import guardar_csv, INGRESOS_FILE
+from utils import guardar_csv, INGRESOS_FILE
 
 
 def procesar_ingreso(usuario, monto_str, categoria, descripcion, ventana=None):

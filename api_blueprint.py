@@ -3,7 +3,7 @@ from functools import wraps
 from db import consultar_tabla, insertar_en_tabla
 
 # --- Crear Blueprint ---
-api_bp = Blueprint("api", __name__, url_prefix="/api")
+powerbi_bp = Blueprint("powerbi", __name__, url_prefix="/powerbi")
 
 # --- Autenticación básica ---
 def autenticar(f):
@@ -16,12 +16,12 @@ def autenticar(f):
     return decorated_function
 
 # --- Ruta principal ---
-@api_bp.route("/")
+@powerbi_bp.route("/")
 def home():
     return jsonify({"mensaje": "API para Power BI funcionando correctamente"})
 
 # --- Consultar gastos ---
-@api_bp.route("/consultar_gastos", methods=["GET"])
+@powerbi_bp.route("/consultar_gastos", methods=["GET"])
 @autenticar
 def consultar_gastos():
     try:
@@ -31,7 +31,7 @@ def consultar_gastos():
         return jsonify({"error": str(e)}), 500
 
 # --- Consultar ingresos ---
-@api_bp.route("/consultar_ingresos", methods=["GET"])
+@powerbi_bp.route("/consultar_ingresos", methods=["GET"])
 @autenticar
 def consultar_ingresos():
     try:
@@ -41,7 +41,7 @@ def consultar_ingresos():
         return jsonify({"error": str(e)}), 500
 
 # --- Insertar gasto ---
-@api_bp.route("/insertar_gasto", methods=["POST"])
+@powerbi_bp.route("/insertar_gasto", methods=["POST"])
 @autenticar
 def insertar_gasto():
     try:
@@ -57,7 +57,7 @@ def insertar_gasto():
         return jsonify({"error": str(e)}), 500
 
 # --- Insertar ingreso ---
-@api_bp.route("/insertar_ingreso", methods=["POST"])
+@powerbi_bp.route("/insertar_ingreso", methods=["POST"])
 @autenticar
 def insertar_ingreso():
     try:
@@ -73,7 +73,7 @@ def insertar_ingreso():
         return jsonify({"error": str(e)}), 500
 
 # --- Endpoint combinado para Power BI ---
-@api_bp.route("/datos", methods=["GET"])
+@powerbi_bp.route("/datos", methods=["GET"])
 @autenticar
 def datos():
     try:

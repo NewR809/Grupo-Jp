@@ -3,11 +3,11 @@ from functools import wraps
 import mysql.connector
 from db import consultar_tabla, insertar_en_tabla
 from config import USERNAME, PASSWORD, DB_CONFIG
-from . import api_bp
+
 
 
 # --- Crear Blueprint ---
-api_bp = Blueprint("api", __name__, url_prefix="/api")
+licenses_bp = Blueprint("licenses", __name__, url_prefix="/api")
 
 # --- Autenticación básica ---
 def autenticar(f):
@@ -27,7 +27,7 @@ def get_connection():
 # 🔑 Panel de Licencias en la raíz del blueprint
 # ============================================================
 
-@api_bp.route("/")
+@licenses_bp.route("/")
 def home():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -41,7 +41,7 @@ def home():
 # 🔑 Endpoints de Licencias
 # ============================================================
 
-@api_bp.route("/licencias/validar", methods=["GET"])
+@licenses_bp.route("/licencias/validar", methods=["GET"])
 def validar_licencia():
     clave = request.args.get("clave")
     if not clave:
@@ -63,7 +63,7 @@ def validar_licencia():
     else:
         return jsonify({"status": "error", "mensaje": "Licencia inválida o inactiva"}), 401
 
-@api_bp.route("/solicitar_licencia", methods=["POST"])
+@licenses_bp.route("/solicitar_licencia", methods=["POST"])
 def solicitar_licencia():
     data = request.get_json(force=True)
     clave = data.get("clave")
@@ -81,7 +81,7 @@ def solicitar_licencia():
 
     return jsonify({"status": "ok", "mensaje": "Solicitud registrada, pendiente de aprobación"}), 201
 
-@api_bp.route("/activar/<int:licencia_id>")
+@licenses_bp.route("/activar/<int:licencia_id>")
 def activar_licencia(licencia_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -89,9 +89,9 @@ def activar_licencia(licencia_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for("api.home"))
+    return redirect(url_for("licenses.home"))
 
-@api_bp.route("/desactivar/<int:licencia_id>")
+@licenses_bp.route("/desactivar/<int:licencia_id>")
 def desactivar_licencia(licencia_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -99,13 +99,13 @@ def desactivar_licencia(licencia_id):
     conn.commit()
     cursor.close()
     conn.close()
-    return redirect(url_for("api.home"))
+    return redirect(url_for("licenses.home"))
 
 # ============================================================
 # 📊 Endpoints Financieros
 # ============================================================
 
-@api_bp.route("/consultar_gastos", methods=["GET"])
+@licenses_bp.route("/consultar_gastos", methods=["GET"])
 @autenticar
 def consultar_gastos():
     try:
@@ -114,7 +114,7 @@ def consultar_gastos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route("/consultar_ingresos", methods=["GET"])
+@licenses_bp.route("/consultar_ingresos", methods=["GET"])
 @autenticar
 def consultar_ingresos():
     try:
@@ -123,7 +123,7 @@ def consultar_ingresos():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route("/insertar_gasto", methods=["POST"])
+@licenses_bp.route("/insertar_gasto", methods=["POST"])
 @autenticar
 def insertar_gasto():
     try:
@@ -138,7 +138,7 @@ def insertar_gasto():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route("/insertar_ingreso", methods=["POST"])
+@licenses_bp.route("/insertar_ingreso", methods=["POST"])
 @autenticar
 def insertar_ingreso():
     try:
@@ -153,7 +153,7 @@ def insertar_ingreso():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@api_bp.route("/datos", methods=["GET"])
+@licenses_bp.route("/datos", methods=["GET"])
 @autenticar
 def datos():
     try:
@@ -170,12 +170,11 @@ def datos():
 # 🔎 Consultas con filtros
 # ============================================================
 
-@api_bp.route("/consultas", methods=["GET"])
+@licenses_bp.route("/consultas", methods=["GET"])
 def consultas():
     empresa = request.args.get("empresa")
     anio = request.args.get("anio")
     mes = request.args.get("mes")
-    semana = request.args.get("semana")
     dia = request.args.get("dia")
 
     try:
@@ -198,9 +197,7 @@ def consultas():
             filtros.append("MONTH(fecha) = %s")
             valores.append(mes)
 
-        if semana:
-            filtros.append("WEEK(fecha, 1) = %s")  # semana ISO
-            valores.append(semana)
+    
 
         if dia:
             filtros.append("DAY(fecha) = %s")

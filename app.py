@@ -38,9 +38,9 @@ import requests
 from db import guardar_en_mysql
 from archivos import guardar_csv, leer_csv
 from conexion import crear_conexion
-from desktop.preview_module import VistaPrevia
-from desktop.vista_previa import VistaPreviaEditable
-from desktop.ingresos_handler import procesar_ingreso
+from preview_module import VistaPrevia
+from vista_previa import VistaPreviaEditable
+from ingresos_handler import procesar_ingreso
 
 
 
@@ -671,13 +671,7 @@ class SistemaFinancieroApp:
         combo_mes.pack(side="left", padx=5)
         entry_mes = combo_mes
 
-        # Semana
-        ttkbcliner.Label(marco_filtros, text="Semana:").pack(side="left", padx=5)
-        semanas = [str(s) for s in range(1, 54)]
-        combo_semana = ttkbcliner.Combobox(marco_filtros, values=semanas, width=4, state="readonly")
-        combo_semana.set("")
-        combo_semana.pack(side="left", padx=5)
-        entry_semana = combo_semana
+    
 
         # Día
         ttkbcliner.Label(marco_filtros, text="Día:").pack(side="left", padx=5)
@@ -716,7 +710,7 @@ class SistemaFinancieroApp:
             text="Consultar",
             bootstyle="success",
             command=lambda: self.ejecutar_consulta(
-                empresa, combo_anio, combo_mes, combo_semana, combo_dia,
+                empresa, combo_anio, combo_mes, combo_dia,
                 tabla_gastos, tabla_ingresos, tabla_recurrentes
             )
         ).pack(side="left", padx=10)
@@ -724,7 +718,7 @@ class SistemaFinancieroApp:
 # --- Función corregida ---
 
 
-    def ejecutar_consulta(self, empresa, combo_anio, combo_mes, combo_semana, combo_dia,
+    def ejecutar_consulta(self, empresa, combo_anio, combo_mes, combo_dia,
                          tabla_gastos, tabla_ingresos, tabla_recurrentes):
         # Limpiar tablas
         for tabla in (tabla_gastos, tabla_ingresos, tabla_recurrentes):
@@ -736,14 +730,13 @@ class SistemaFinancieroApp:
             "empresa": empresa,
             "anio": combo_anio.get().strip(),
             "mes": combo_mes.get().strip(),
-            "semana": combo_semana.get().strip(),
             "dia": combo_dia.get().strip()
         }
 
        # Endpoint correcto de la API
         url = "https://api-powerbi-xoh2.onrender.com/api/consultas"  # 👈 cambia por tu URL real
         try:
-            response = requests.get(url, params=params, timeout=15, auth=("powerbi", "secure123"))
+            response = requests.get(url, params=params, timeout=50, auth=("powerbi", "secure123"))
             response.raise_for_status()
 
             data = response.json()
