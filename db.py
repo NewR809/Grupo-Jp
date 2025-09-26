@@ -2,7 +2,7 @@
 #numeor 2
 
 from conexion import crear_conexion
-from tkinter import messagebox
+#from tkinter import messagebox
 
 from conexion import crear_conexion
 
