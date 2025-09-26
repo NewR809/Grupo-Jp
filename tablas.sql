@@ -64,3 +64,36 @@ CREATE TABLE IF NOT EXISTS log_sesiones (
     accion VARCHAR(50) NOT NULL, -- login, logout, bloqueo, etc.
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================
+-- 📊 Índices para Tablas Financieras
+-- ============================================
+
+-- Gastos: consultas frecuentes por usuario y fecha
+CREATE INDEX idx_gastos_usuario_fecha ON gastos (usuario, fecha);
+CREATE INDEX idx_gastos_categoria_fecha ON gastos (categoria, fecha);
+
+-- Ingresos: consultas frecuentes por usuario y fecha
+CREATE INDEX idx_ingresos_usuario_fecha ON ingresos (usuario, fecha);
+CREATE INDEX idx_ingresos_categoria_fecha ON ingresos (categoria, fecha);
+
+-- ============================================
+-- 🔑 Índices para Licencias
+-- ============================================
+
+-- Ya tienes UNIQUE en clave, pero añadimos índice en activa para filtrar rápido
+CREATE INDEX idx_licencias_activa ON licencias (activa);
+
+-- ============================================
+-- 👤 Índices para Usuarios
+-- ============================================
+
+-- Ya tienes UNIQUE en username, pero añadimos índice en role
+CREATE INDEX idx_usuarios_role ON usuarios (role);
+
+-- ============================================
+-- 📜 Índices para Auditoría de Sesiones
+-- ============================================
+
+-- Consultas frecuentes por usuario y fecha
+CREATE INDEX idx_log_usuario_fecha ON log_sesiones (usuario, fecha);

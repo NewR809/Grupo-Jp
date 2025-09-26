@@ -1,6 +1,5 @@
-#i
-#7
-
+# Importaciones
+import os, mysql.connector
 import mysql.connector
 from mysql.connector import pooling
 from config import DB_CONFIG
@@ -9,10 +8,10 @@ from config import DB_CONFIG
 
 def crear_conexion():
     return mysql.connector.connect(
-        host="gondola.proxy.rlwy.net",
-        user="root",
-        password="DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG",
-        database="railway"
+        host=os.getenv("DB_HOST", "gondola.proxy.rlwy.net"),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", "DKdNBPtQrzWVwArUWDqIFKEzbSnQIvlG"),
+        database=os.getenv("DB_NAME", "railway")
     )
 
 

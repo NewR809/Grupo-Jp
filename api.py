@@ -167,12 +167,13 @@ def datos():
         return jsonify({"error": str(e)}), 500
 
 # ============================================================
-# 🔎 Consultas con filtros
+# 🔎 Consultas con filtros (versión robusta)
 # ============================================================
 
 @licenses_bp.route("/consultas", methods=["GET"])
 def consultas():
-    empresa = request.args.get("empresa")
+    # empresa = usuario
+    usuario = request.args.get("empresa")
     anio = request.args.get("anio")
     mes = request.args.get("mes")
     dia = request.args.get("dia")
@@ -181,48 +182,60 @@ def consultas():
         conn = get_connection()
         cur = conn.cursor(dictionary=True)
 
-        # --- Construcción dinámica de filtros ---
+        # --- Construcción segura de filtros ---
         filtros = []
         valores = []
 
-        if empresa:
-            filtros.append("empresa = %s")
-            valores.append(empresa)
+        if usuario and usuario.strip():
+            filtros.append("usuario = %s")
+            valores.append(usuario.strip())
 
-        if anio:
+        if anio and anio.isdigit():
             filtros.append("YEAR(fecha) = %s")
-            valores.append(anio)
+            valores.append(int(anio))
 
-        if mes:
+        if mes and mes.isdigit():
             filtros.append("MONTH(fecha) = %s")
-            valores.append(mes)
+            valores.append(int(mes))
 
-    
-
-        if dia:
+        if dia and dia.isdigit():
             filtros.append("DAY(fecha) = %s")
-            valores.append(dia)
+            valores.append(int(dia))
 
         where_clause = " AND ".join(filtros) if filtros else "1=1"
 
-        # --- Consultas SQL ---
-        cur.execute(f"SELECT * FROM gastos WHERE {where_clause}", valores)
+        # --- Consultas SQL explícitas ---
+        sql_gastos = f"""
+            SELECT id, usuario, fecha, monto, categoria, descripcion
+            FROM gastos
+            WHERE {where_clause}
+        """
+        sql_ingresos = f"""
+            SELECT id, usuario, fecha, monto, categoria, descripcion
+            FROM ingresos
+            WHERE {where_clause}
+        """
+
+        print("DEBUG SQL:", sql_gastos, valores)
+
+        cur.execute(sql_gastos, valores)
         gastos = cur.fetchall()
 
-        cur.execute(f"SELECT * FROM ingresos WHERE {where_clause}", valores)
+        cur.execute(sql_ingresos, valores)
         ingresos = cur.fetchall()
 
-        # --- Gasto recurrente (categoría más repetida por mes) ---
+        # --- Gasto recurrente ---
         recurrente = []
-        if mes:
-            cur.execute(f"""
+        if mes and mes.isdigit():
+            sql_recurrente = f"""
                 SELECT MONTH(fecha) AS mes, categoria, COUNT(*) AS repeticiones
                 FROM gastos
                 WHERE {where_clause}
                 GROUP BY mes, categoria
                 ORDER BY repeticiones DESC
                 LIMIT 5
-            """, valores)
+            """
+            cur.execute(sql_recurrente, valores)
             recurrente = cur.fetchall()
 
         cur.close()
@@ -235,4 +248,5 @@ def consultas():
         }), 200
 
     except Exception as e:
+        print("❌ Error en /consultas:", e)
         return jsonify({"error": str(e)}), 500
