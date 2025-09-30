@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background: #f4f4f4; }
+        a { text-decoration: none; padding: 5px 10px; border-radius: 4px; }
+        .activar { background: #4CAF50; color: white; }
+        .desactivar { background: #f44336; color: white; }
+        form { margin-top: 20px; }
+        input { margin: 5px; padding: 5px; }
+        button { padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <h1>Panel de Administración de Licencias</h1>
+
+    <h2>Licencias Registradas</h2>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Clave</th>
+            <th>Cliente</th>
+            <th>Estado</th>
+            <th>Fecha Registro</th>
+            <th>Acciones</th>
+        </tr>
+        {% for lic in licencias %}
+        <tr>
+            <td>{{ lic.id }}</td>
+            <td>{{ lic.clave }}</td>
+            <td>{{ lic.cliente }}</td>
+            <td>{{ "Activa" if lic.activa else "Inactiva" }}</td>
+            <td>{{ lic.fecha_registro }}</td>
+            <td>
+                {% if lic.activa %}
+                    <a href="{{ url_for('desactivar_licencia', licencia_id=lic.id) }}" class="desactivar">Desactivar</a>
+                {% else %}
+                    <a href="{{ url_for('activar_licencia', licencia_id=lic.id) }}" class="activar">Activar</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Registrar Nueva Licencia</h2>
+    <form method="POST" action="{{ url_for('solicitar_licencia') }}">
+        <input type="text" name="clave" placeholder="Clave de licencia" required>
+        <input type="text" name="cliente" placeholder="Cliente" required>
+        <button type="submit">Registrar</button>
+    </form>
+</body>
+</html>

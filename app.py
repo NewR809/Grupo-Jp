@@ -74,10 +74,10 @@ nombres_usuarios = {
 }
 
 CLAVES_EMPRESAS = {
-    "Henko01": "henko123",
-    "Tpack": "tpack123",
-    "JpSolar": "jpsolar123",
-    "Quidopedia": "quidopedia123"
+    "Henko01": "henko6160",
+    "Tpack": "tpack6160",
+    "JpSolar": "jpsolar6160",
+    "Quidopedia": "quiropedia12"
 }
 
 
@@ -753,7 +753,7 @@ class SistemaFinancieroApp:
         for g in gastos:
             tabla_gastos.insert("", "end", values=(g["fecha"], g["usuario"], g["monto"], g["categoria"], g["descripcion"]))
         for i in ingresos:
-            tabla_ingresos.insert("", "end", values=(i["fecha"], i["usuario"], i["monto"], i["fuente"], i["descripcion"]))
+            tabla_ingresos.insert("", "end", values=(i["fecha"], i["usuario"], i["monto"], i["categoria"], i["descripcion"]))
         for r in recurrente:
             tabla_recurrentes.insert("", "end", values=(params["mes"], r["categoria"], r["repeticiones"]))
 

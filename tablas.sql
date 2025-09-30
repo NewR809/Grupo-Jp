@@ -55,6 +55,22 @@ VALUES ('visor', 'visorsecret', 'visor')
 ON DUPLICATE KEY UPDATE username=username;
 
 -- ============================================
+-- 🖥️ Tabla de Dispositivos
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS devices (
+    device_id VARCHAR(100) PRIMARY KEY,         -- Identificador único de la máquina
+    alias VARCHAR(100),                         -- Nombre amigable (ej. "Laptop Oficina")
+    usuario VARCHAR(100),                       -- Usuario dueño del dispositivo
+    estado ENUM('activo','inactivo') DEFAULT 'inactivo',
+    registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices útiles
+CREATE INDEX idx_devices_usuario ON devices (usuario);
+CREATE INDEX idx_devices_estado ON devices (estado);
+
+-- ============================================
 -- 📜 Tabla de Auditoría de Sesiones
 -- ============================================
 

@@ -1,6 +1,7 @@
 #actualizaciones realizadas en los archivos:
 #db.py
 from mysql.connector import pooling
+from db import LicenseStore  # Asegúrate de que LicenseStore esté definido en db.py
 
 # Configuración de conexión a Railway
 DB_CONFIG = {
@@ -11,6 +12,8 @@ DB_CONFIG = {
     "database": "railway",
     "charset": "utf8mb4"
 }
+
+store = LicenseStore(DB_CONFIG)
 
 # Crear un pool de conexiones reutilizables
 connection_pool = pooling.MySQLConnectionPool(

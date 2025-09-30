@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+{% block content %}<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Licencias</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input[type="text"] { padding: 6px; width: 300px; margin-bottom: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .btn { padding: 6px 12px; text-decoration: none; border-radius: 4px; cursor: pointer; }
+        .activar { background-color: #4CAF50; color: white; }
+        .desactivar { background-color: #f44336; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔑 Licencias Registradas</h1>
+
+    <input type="text" id="filtro" placeholder="Buscar por clave o cliente..." onkeyup="filtrarTabla()">
+
+    <table id="tabla-licencias">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Clave</th>
+                <th>Cliente</th>
+                <th>Activa</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lic in licencias %}
+            <tr id="fila-{{ lic.id }}">
+                <td>{{ lic.id }}</td>
+                <td class="clave">{{ lic.clave }}</td>
+                <td class="cliente">{{ lic.cliente }}</td>
+                <td id="estado-{{ lic.id }}">{{ '✅' if lic.activa else '❌' }}</td>
+                <td>{{ lic.fecha_registro }}</td>
+                <td>
+                    {% if lic.activa %}
+                        <button class="btn desactivar" onclick="cambiarEstado('{{ lic.id }}', 'desactivar')">Desactivar</button>
+                    {% else %}
+                        <button class="btn activar" onclick="cambiarEstado('{{ lic.id }}', 'activar')">Activar</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function cambiarEstado(id, accion) {
+            fetch(`/api/${accion}/${id}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Error al cambiar estado");
+                    const estado = document.getElementById(`estado-${id}`);
+                    const fila = document.getElementById(`fila-${id}`);
+                    if (accion === "activar") {
+                        estado.textContent = "✅";
+                        fila.querySelector("button").textContent = "Desactivar";
+                        fila.querySelector("button").className = "btn desactivar";
+                        fila.querySelector("button").setAttribute("onclick", `cambiarEstado(${id}, 'desactivar')`);
+                    } else {
+                        estado.textContent = "❌";
+                        fila.querySelector("button").textContent = "Activar";
+                        fila.querySelector("button").className = "btn activar";
+                        fila.querySelector("button").setAttribute("onclick", `cambiarEstado(${id}, 'activar')`);
+                    }
+                })
+                .catch(error => alert("Error: " + error.message));
+        }
+
+        function filtrarTabla() {
+            const filtro = document.getElementById("filtro").value.toLowerCase();
+            const filas = document.querySelectorAll("#tabla-licencias tbody tr");
+            filas.forEach(fila => {
+                const clave = fila.querySelector(".clave").textContent.toLowerCase();
+                const cliente = fila.querySelector(".cliente").textContent.toLowerCase();
+                fila.style.display = (clave.includes(filtro) || cliente.includes(filtro)) ? "" : "none";
+            });
+        }
+    </script>
+</body>
+</html>
+{% endblock %}
