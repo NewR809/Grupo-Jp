@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 .venv/
+test_api.py
+test_sistema_completo.py
